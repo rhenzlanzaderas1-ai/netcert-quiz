@@ -130,6 +130,8 @@ const app = {
     { icon: '☁️', color: '#1a6b5a' },
   ],
 
+  authMode: 'login', // 'login' or 'register'
+
   /* ── boot ────────────────────────────────────────── */
   async init() {
     // Apply saved theme (default dark)
@@ -156,9 +158,12 @@ const app = {
 
     this._startBinaryRain();
 
+    // Wait for Firebase auth to initialize
+    const user = await Auth.init();
+
     // ── Auth check ────────────────────────────────────
-    if (Auth.isLoggedIn()) {
-      await this._onLoginSuccess(Auth.currentUser(), false);
+    if (user) {
+      await this._onLoginSuccess(user, false);
     } else {
       this.showLogin();
     }
@@ -203,68 +208,61 @@ const app = {
     return name.slice(0, 3);
   },
 
-  /* ── handle login form submit ────────────────────── */
-  async handleLogin(event) {
-    event.preventDefault();
-    const studentId = document.getElementById('login-id').value.trim();
-    const password  = document.getElementById('login-pw').value;
-    const remember  = document.getElementById('login-remember').checked;
+  /* ── handle login/register form submit ────────────────────── */
+  toggleAuthMode() {
+    this.authMode = this.authMode === 'login' ? 'register' : 'login';
+    
+    const isReg = this.authMode === 'register';
+    document.getElementById('field-name').classList.toggle('hidden', !isReg);
+    
+    // Update texts
+    document.getElementById('auth-mode-text').textContent = isReg ? 'Student Registration · 學生註冊' : 'Student Login · 學生登入';
+    document.getElementById('auth-btn-text').textContent = isReg ? '註冊 Register' : '登入 Sign In';
+    
+    const toggleText = isReg 
+      ? 'Already have an account? <strong style="color:var(--accent)">Login here</strong>'
+      : 'Need an account? <strong style="color:var(--accent)">Register here</strong>';
+    document.getElementById('auth-toggle-text').innerHTML = toggleText;
 
-    const btn     = document.getElementById('login-btn');
-    const errDiv  = document.getElementById('login-error');
+    // Reset error
+    document.getElementById('login-error').classList.add('hidden');
+  },
+
+  async handleAuthSubmit(event) {
+    event.preventDefault();
+    const isReg = this.authMode === 'register';
+    
+    const email = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-pw').value;
+    const name = isReg ? document.getElementById('auth-name').value.trim() : null;
+
+    const btn = document.getElementById('auth-btn');
+    const errDiv = document.getElementById('login-error');
 
     // Reset error
     errDiv.classList.add('hidden');
     errDiv.textContent = '';
     btn.disabled = true;
-    document.getElementById('login-btn-text').textContent = '登入中…';
+    document.getElementById('auth-btn-text').textContent = isReg ? '註冊中…' : '登入中…';
 
     try {
-      const result = await Auth.login(studentId, password, remember);
-      const user   = result.user;
-
-      // Daily XP bonus
-      if (result.xpGained > 0) {
-        setTimeout(() => this.toast(`+${result.xpGained} XP 每日登入獎勵！`, '⭐', 'success'), 800);
+      let result;
+      if (isReg) {
+        result = await Auth.register(email, password, name);
+        this.toast('註冊成功！Registration successful!', '🎉', 'success');
+      } else {
+        result = await Auth.login(email, password);
       }
-
+      
+      const user = result.user;
       await this._onLoginSuccess(user, true);
 
     } catch (err) {
-      errDiv.textContent = err.message === 'Failed to fetch'
-        ? '⚠️ Server unavailable — running in offline mode'
-        : `❌ ${err.message}`;
+      errDiv.textContent = `❌ ${err.message}`;
       errDiv.classList.remove('hidden');
-
-      // Offline fallback — create a guest session using student ID
-      if (err.message === 'Failed to fetch' || err.message.includes('503')) {
-        this._offlineLogin(studentId, password);
-      }
     } finally {
       btn.disabled = false;
-      document.getElementById('login-btn-text').textContent = '登入 Sign In';
-    }
-  },
-
-  /* ── Offline fallback login (no server) ─────────── */
-  _offlineLogin(studentId, password) {
-    // For offline mode, accept login if password matches studentId (default)
-    // In production this should be removed — just for local dev without KV
-    if (String(studentId) === String(password) || password.length >= 6) {
-      const offlineUser = {
-        studentId, password: undefined,
-        name: `Student ${studentId}`,
-        role: '學生',
-        xp: 0, level: 1, streak: 0,
-      };
-      localStorage.setItem('nc-user', JSON.stringify(offlineUser));
-      // Generate a simple offline token (not secure, local only)
-      const fakeToken = btoa(JSON.stringify({ studentId, name: offlineUser.name, exp: Date.now()/1000 + 86400*7 })) + '.offline.' + btoa('{}');
-      localStorage.setItem('nc-jwt', fakeToken);
-      setTimeout(() => {
-        this._onLoginSuccess(offlineUser, true);
-        this.toast('⚠️ Offline mode — progress will not sync', 'ℹ️');
-      }, 500);
+      document.getElementById('auth-btn-text').textContent = isReg ? '註冊 Register' : '登入 Sign In';
     }
   },
 

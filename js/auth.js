@@ -1,195 +1,124 @@
 /**
- * js/auth.js — NetCert Authentication Module
- * ─────────────────────────────────────────────────────────────────────────────
- * Provides Auth.login(), Auth.logout(), Auth.currentUser(), etc.
- * Falls back gracefully when the API is unavailable.
+ * Firebase Authentication Module
  */
 
-const Auth = (() => {
-  const TOKEN_KEY = 'nc-jwt';
-  const USER_KEY  = 'nc-user';
-  const API_BASE  = '/api/auth';
+window.Auth = {
+  _user: null,
 
-  // ── Token storage ─────────────────────────────────────────────────────────
+  // Wait for the initial Firebase auth state to resolve
+  init() {
+    return new Promise((resolve) => {
+      auth.onAuthStateChanged((user) => {
+        if (user) {
+          this._user = {
+            uid: user.uid,
+            email: user.email,
+            name: user.displayName || user.email.split('@')[0],
+          };
+        } else {
+          this._user = null;
+        }
+        resolve(this._user);
+      });
+    });
+  },
 
-  function getToken() {
-    return localStorage.getItem(TOKEN_KEY) || null;
-  }
+  isLoggedIn() {
+    return this._user !== null;
+  },
 
-  function _setToken(token) {
-    localStorage.setItem(TOKEN_KEY, token);
-  }
+  currentUser() {
+    return this._user;
+  },
 
-  function _clearToken() {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-  }
+  _formatEmail(input) {
+    input = input.trim().toLowerCase().replace(/\s+/g, '_');
+    if (input.includes('@')) return input;
+    return `${input}@netcert.app`;
+  },
 
-  // ── Parse JWT payload (no verification — trust the server) ────────────────
-
-  function _parseJWT(token) {
+  async login(idOrEmail, password) {
+    const email = this._formatEmail(idOrEmail);
     try {
-      const payload = token.split('.')[1];
-      return JSON.parse(atob(payload));
-    } catch {
-      return null;
-    }
-  }
-
-  // ── isLoggedIn ────────────────────────────────────────────────────────────
-
-  function isLoggedIn() {
-    const token = getToken();
-    if (!token) return false;
-    const p = _parseJWT(token);
-    if (!p || !p.exp) return false;
-    // Check expiry
-    return Date.now() / 1000 < p.exp;
-  }
-
-  // ── currentUser — returns cached user object ───────────────────────────────
-
-  function currentUser() {
-    const raw = localStorage.getItem(USER_KEY);
-    if (raw) {
-      try { return JSON.parse(raw); } catch { /* fall through */ }
-    }
-    // Fall back to JWT payload
-    const token = getToken();
-    return token ? _parseJWT(token) : null;
-  }
-
-  // ── requireAuth — redirect to login if not authenticated ─────────────────
-
-  function requireAuth() {
-    if (!isLoggedIn()) {
-      // Show login view instead of redirect (SPA mode)
-      const app = window.app;
-      if (app && typeof app.showLogin === 'function') {
-        app.showLogin();
+      const userCredential = await auth.signInWithEmailAndPassword(email, password);
+      this._user = {
+        uid: userCredential.user.uid,
+        email: userCredential.user.email,
+        name: userCredential.user.displayName || email.split('@')[0],
+      };
+      
+      // Load user metadata from Firestore to get XP and level
+      const docSnap = await db.collection("users").doc(this._user.uid).get();
+      if (docSnap.exists) {
+        this._user = { ...this._user, ...docSnap.data() };
       }
-      return false;
+
+      return { user: this._user, xpGained: 0 };
+    } catch (error) {
+      throw new Error(this._getFriendlyError(error.code));
     }
-    return true;
-  }
+  },
 
-  // ── login ─────────────────────────────────────────────────────────────────
-
-  async function login(studentId, password, remember = false) {
-    const resp = await fetch(`${API_BASE}/login`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ studentId: String(studentId), password: String(password) }),
-    });
-
-    const data = await resp.json();
-
-    if (!resp.ok) {
-      throw new Error(data.error || 'Login failed');
+  async register(idOrEmail, password, fullName) {
+    const email = this._formatEmail(idOrEmail);
+    if (!fullName || fullName.trim() === '') {
+      throw new Error("請輸入姓名 / Full name is required");
     }
 
-    // Store token
-    _setToken(data.token);
+    try {
+      const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+      await userCredential.user.updateProfile({ displayName: fullName });
+      
+      this._user = {
+        uid: userCredential.user.uid,
+        email: userCredential.user.email,
+        name: fullName,
+        xp: 0,
+        level: 1,
+        streak: 0
+      };
 
-    // Cache user object
-    localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+      // Create initial progress document in Firestore
+      await db.collection("users").doc(this._user.uid).set({
+        name: fullName,
+        email: email,
+        xp: 0,
+        level: 1,
+        streak: 0,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
 
-    if (!remember) {
-      // Clear on browser close using sessionStorage mirror
-      sessionStorage.setItem('nc-session-active', '1');
+      return { user: this._user };
+    } catch (error) {
+      throw new Error(this._getFriendlyError(error.code));
     }
+  },
 
-    return data; // { token, user, xpGained }
-  }
+  async logout() {
+    await auth.signOut();
+    this._user = null;
+    app.showLogin();
+  },
 
-  // ── logout ────────────────────────────────────────────────────────────────
+  getInitials(name) {
+    if (!name) return 'NC';
+    // For English names like "John Doe", return JD. For Chinese like "陳品睿", return 陳品.
+    const parts = name.split(' ');
+    if (parts.length > 1) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  },
 
-  function logout() {
-    _clearToken();
-    sessionStorage.removeItem('nc-session-active');
-    // Show login view
-    const app = window.app;
-    if (app && typeof app.showLogin === 'function') {
-      app.showLogin();
-    } else {
-      window.location.reload();
+  _getFriendlyError(code) {
+    switch (code) {
+      case 'auth/invalid-email': return '無效的電子郵件格式 / Invalid email format';
+      case 'auth/user-not-found': return '找不到此帳號 / User not found';
+      case 'auth/wrong-password': return '密碼錯誤 / Incorrect password';
+      case 'auth/email-already-in-use': return '此帳號已被註冊 / Email already in use';
+      case 'auth/weak-password': return '密碼至少需要 6 個字元 / Password must be at least 6 characters';
+      case 'auth/invalid-credential': return '帳號或密碼錯誤 / Invalid credentials';
+      default: return `認證失敗 (${code})`;
     }
   }
-
-  // ── fetchMe — get fresh profile from server ───────────────────────────────
-
-  async function fetchMe() {
-    const token = getToken();
-    if (!token) throw new Error('Not authenticated');
-
-    const resp = await fetch(`${API_BASE}/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    const data = await resp.json();
-    if (!resp.ok) throw new Error(data.error || 'Failed to load profile');
-
-    // Update cache
-    localStorage.setItem(USER_KEY, JSON.stringify(data.user));
-    return data.user;
-  }
-
-  // ── changePassword ────────────────────────────────────────────────────────
-
-  async function changePassword(oldPassword, newPassword) {
-    const token = getToken();
-    if (!token) throw new Error('Not authenticated');
-
-    const resp = await fetch(`${API_BASE}/change-password`, {
-      method:  'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization:  `Bearer ${token}`,
-      },
-      body: JSON.stringify({ oldPassword, newPassword }),
-    });
-
-    const data = await resp.json();
-    if (!resp.ok) throw new Error(data.error || 'Failed to change password');
-    return data;
-  }
-
-  // ── updateCachedUser — merge partial updates into localStorage ────────────
-
-  function updateCachedUser(partial) {
-    const user = currentUser() || {};
-    const merged = { ...user, ...partial };
-    localStorage.setItem(USER_KEY, JSON.stringify(merged));
-    return merged;
-  }
-
-  // ── getInitials — derive avatar initials from name ────────────────────────
-
-  function getInitials(name) {
-    if (!name) return '?';
-    // Extract English name from parentheses if present
-    const enMatch = name.match(/\(([^)]+)\)/);
-    if (enMatch) {
-      const parts = enMatch[1].trim().split(/\s+/);
-      return parts.length >= 2
-        ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-        : parts[0].slice(0, 2).toUpperCase();
-    }
-    // Chinese name: first 2 chars
-    return name.slice(0, 2);
-  }
-
-  // ── Public API ────────────────────────────────────────────────────────────
-  return {
-    login,
-    logout,
-    fetchMe,
-    changePassword,
-    getToken,
-    isLoggedIn,
-    currentUser,
-    requireAuth,
-    updateCachedUser,
-    getInitials,
-  };
-})();
+};

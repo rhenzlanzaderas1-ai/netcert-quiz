@@ -95,40 +95,37 @@
         </div>
         <h1 class="login-title">NetCert</h1>
         <p class="login-sub">網路認證複習系統</p>
-        <p class="login-sub2">Student Login · 學生登入</p>
+        <p class="login-sub2" id="auth-mode-text">Student Login · 學生登入</p>
 
         <!-- Form -->
-        <form class="login-form" id="login-form" onsubmit="app.handleLogin(event)">
-          <div class="login-field">
-            <label class="login-label" for="login-id">學號 Student ID</label>
-            <input class="login-input" id="login-id" type="text" inputmode="numeric"
-              placeholder="e.g. 25115410" autocomplete="username" required>
+        <form class="login-form" id="login-form" onsubmit="app.handleAuthSubmit(event)">
+          <div class="login-field hidden" id="field-name">
+            <label class="login-label" for="auth-name">姓名 Full Name</label>
+            <input class="login-input" id="auth-name" type="text" placeholder="e.g. John Doe" autocomplete="name">
           </div>
           <div class="login-field">
-            <label class="login-label" for="login-pw">密碼 Password</label>
-            <input class="login-input" id="login-pw" type="password"
-              placeholder="Default: your student ID" autocomplete="current-password" required>
+            <label class="login-label" for="auth-email">帳號 Username (or Student ID)</label>
+            <input class="login-input" id="auth-email" type="text"
+              placeholder="e.g. rhenz123" autocomplete="username" required>
           </div>
-          <div class="login-options">
-            <label class="login-remember">
-              <input type="checkbox" id="login-remember">
-              <span>Remember me</span>
-            </label>
+          <div class="login-field">
+            <label class="login-label" for="auth-pw">密碼 Password</label>
+            <input class="login-input" id="auth-pw" type="password"
+              placeholder="At least 6 characters" autocomplete="current-password" required>
           </div>
 
           <div class="login-error hidden" id="login-error"></div>
 
-          <button class="login-btn" type="submit" id="login-btn">
-            <span id="login-btn-text">登入 Sign In</span>
+          <button class="login-btn" type="submit" id="auth-btn">
+            <span id="auth-btn-text">登入 Sign In</span>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <polyline points="9 18 15 12 9 6"/>
             </svg>
           </button>
         </form>
 
-        <p class="login-hint">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          Default password is your student number
+        <p class="login-hint" style="margin-top:15px; cursor:pointer;" onclick="app.toggleAuthMode()">
+          <span id="auth-toggle-text">Need an account? <strong style="color:var(--accent)">Register here</strong></span>
         </p>
       </div>
     </div>
@@ -463,6 +460,17 @@
   </section>
 
 </main>
+
+<!-- Firebase SDK & Config -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script>
+  firebase.initializeApp(window.firebaseConfig);
+  window.db = firebase.firestore();
+  window.auth = firebase.auth();
+</script>
 
 <script src="data/questions.js"></script>
 <script src="data/questions_pdf.js"></script>
