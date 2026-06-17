@@ -100,7 +100,8 @@ window.Kahoot = {
 
     // Update URL hint
     const hintEl = document.getElementById('k-url-hint');
-    const shortUrl = window.location.hostname + window.location.pathname.replace(/\/$/, '');
+    const host = window.location.host || 'netcert-quiz.web.app';
+    const shortUrl = host + window.location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, '');
     if (hintEl) hintEl.textContent = shortUrl + '  →  "Join a Game"';
 
     // Generate QR code

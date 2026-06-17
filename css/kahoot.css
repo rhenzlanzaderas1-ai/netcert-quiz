@@ -240,7 +240,7 @@
 }
 
 /* ── Host Question View ────────────────────────────── */
-#k-view-host-question { overflow: hidden; display: flex; flex-direction: column; }
+#k-view-host-question { overflow: hidden; }
 .k-host-answers-grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
   padding: 16px 24px 32px; flex: 1; overflow: hidden; min-height: 40vh;
