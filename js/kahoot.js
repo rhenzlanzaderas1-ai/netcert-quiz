@@ -224,6 +224,12 @@ window.Kahoot = {
       });
       const el = document.getElementById('k-answered-count');
       if (el) el.textContent = total + ' answered';
+      
+      // Auto-advance if all players answered
+      const totalPlayers = Object.keys(this._players || {}).length;
+      if (totalPlayers > 0 && total >= totalPlayers && this._timeLeft > 0) {
+        this._timeLeft = 0;
+      }
     });
     const off = () => ref.off('value', fn);
     off._isAnswerListener = true;
@@ -280,6 +286,13 @@ window.Kahoot = {
     });
 
     this._renderLeaderboard(sorted, correctIdx, q, true);
+  },
+
+  /* ── HOST: Question control ─────────────────────── */
+  skipQuestion() {
+    if (this.role === 'host') {
+      this._timeLeft = 0;
+    }
   },
 
   /* ── HOST: Next question ────────────────────────── */
@@ -383,13 +396,16 @@ window.Kahoot = {
       if (i === optionIdx) btn.classList.add('k-selected');
     });
 
-    // Show the premium "locked in" waiting overlay
+    // Show the premium "locked in" waiting overlay with compliment
+    const compliments = ["Awesome choice!", "You're doing great!", "Fingers crossed!", "Genius at work...", "Hold tight!", "Brilliant move!", "Keep it up!"];
+    const randomCompliment = compliments[Math.floor(Math.random() * compliments.length)];
+
     const overlay = document.getElementById('k-player-waiting-overlay');
     if (overlay) {
       overlay.innerHTML = `
         <div class="k-locked-icon">✓</div>
         <div class="k-locked-title">Answer Locked In!</div>
-        <div class="k-locked-sub">Waiting for everyone to answer</div>
+        <div class="k-locked-sub">${randomCompliment}</div>
         <div class="k-waiting-dots large"><span></span><span></span><span></span></div>
       `;
       overlay.classList.remove('hidden');
@@ -418,18 +434,34 @@ window.Kahoot = {
 
   /* ── Timer UI ───────────────────────────────────── */
   _updateTimerUI() {
-    const el = document.getElementById('k-timer-num');
-    const ring = document.getElementById('k-timer-ring-fg');
-    if (el) {
-      el.textContent = this._timeLeft;
-      el.style.color = this._timeLeft <= 5 ? '#ff4060' : this._timeLeft <= 10 ? '#ffb020' : '#fff';
+    // Update Host UI
+    const hNum = document.getElementById('k-timer-num');
+    const hRing = document.getElementById('k-timer-ring-fg');
+    if (hNum) {
+      hNum.textContent = this._timeLeft;
+      hNum.style.color = this._timeLeft <= 5 ? '#ff4060' : this._timeLeft <= 10 ? '#ffb020' : '#fff';
     }
-    if (ring) {
+    if (hRing) {
       const circ = 2 * Math.PI * 45;
       const pct = this._timeLeft / (this._timeLimitSec || 20);
-      ring.style.strokeDasharray = circ;
-      ring.style.strokeDashoffset = circ * (1 - pct);
-      ring.style.stroke = this._timeLeft <= 5 ? '#ff4060' : this._timeLeft <= 10 ? '#ffb020' : '#c4334a';
+      hRing.style.strokeDasharray = circ;
+      hRing.style.strokeDashoffset = circ * (1 - pct);
+      hRing.style.stroke = this._timeLeft <= 5 ? '#ff4060' : this._timeLeft <= 10 ? '#ffb020' : '#c4334a';
+    }
+
+    // Update Player UI
+    const pNum = document.getElementById('k-ptimer-num');
+    const pRing = document.getElementById('k-ptimer-ring-fg');
+    if (pNum) {
+      pNum.textContent = this._timeLeft;
+      pNum.style.color = this._timeLeft <= 5 ? '#ff4060' : this._timeLeft <= 10 ? '#ffb020' : '#fff';
+    }
+    if (pRing) {
+      const circ = 2 * Math.PI * 45;
+      const pct = this._timeLeft / (this._timeLimitSec || 20);
+      pRing.style.strokeDasharray = circ;
+      pRing.style.strokeDashoffset = circ * (1 - pct);
+      pRing.style.stroke = this._timeLeft <= 5 ? '#ff4060' : this._timeLeft <= 10 ? '#ffb020' : '#c4334a';
     }
   },
 
@@ -485,22 +517,19 @@ window.Kahoot = {
       </div>`).join('');
   },
 
-  /* ── RENDER: Player Question ────────────────────── */
   _renderPlayerQuestion(currentQ) {
     if (!currentQ) return;
     this._showKahootView('player-question');
-    const colors = ['#e74c3c','#3498db','#f39c12','#2ecc71'];
+    const colors = ['#b32034', '#155eb0', '#c98616', '#228a41'];
     const icons  = ['▲','◆','●','■'];
-    document.getElementById('k-pq-num').textContent = `Q${(currentQ.idx||0)+1} / ${currentQ.total||'?'}`;
-    document.getElementById('k-pq-text').textContent = currentQ.question;
+    document.getElementById('k-pq-num').textContent = `Q${(currentQ.idx||0)+1}`;
     const overlay = document.getElementById('k-player-waiting-overlay');
     if (overlay) overlay.classList.add('hidden');
     const grid = document.getElementById('k-player-answers');
     if (!grid) return;
     grid.innerHTML = currentQ.options.map((opt, i) => `
       <button class="k-answer-btn" onclick="Kahoot.submitAnswer(${i})" style="background:${colors[i]}">
-        <span class="k-answer-icon">${icons[i]}</span>
-        <span class="k-answer-text">${opt}</span>
+        <span class="k-answer-icon" style="font-size:3rem;margin-top:5px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.4));">${icons[i]}</span>
       </button>`).join('');
   },
 
