@@ -437,15 +437,55 @@ const app = {
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.classList.toggle('active', btn.id === `tab-btn-${tabId}`);
     });
-    ['dashboard', 'progress', 'study', 'info'].forEach(id => {
+    ['dashboard', 'progress', 'study', 'info', 'admin'].forEach(id => {
       const el = document.getElementById(`tab-${id}`);
       if (el) el.classList.toggle('hidden', id !== tabId);
     });
+    
+    if (tabId === 'admin') {
+      this.loadAdminData();
+    }
   },
 
   _hideAllViews() {
     ['login','dashboard','category','quiz','results','review','smart-review']
       .forEach(v => document.getElementById(`view-${v}`)?.classList.add('hidden'));
+  },
+
+  /* ── Admin Dashboard ─────────────────────────────── */
+  async loadAdminData() {
+    if (!Auth.isAdmin()) return;
+    const tbody = document.getElementById('admin-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">Loading students...</td></tr>';
+    try {
+      const snap = await db.collection("users").get();
+      let html = '';
+      snap.forEach(doc => {
+        const u = doc.data();
+        let dateStr = 'N/A';
+        if (u.createdAt && u.createdAt.toDate) {
+          dateStr = u.createdAt.toDate().toLocaleDateString();
+        } else if (u.createdAt && u.createdAt.seconds) {
+          dateStr = new Date(u.createdAt.seconds * 1000).toLocaleDateString();
+        } else if (typeof u.createdAt === 'string') {
+          dateStr = new Date(u.createdAt).toLocaleDateString();
+        }
+        html += `
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 12px; color: var(--text-hi);">${u.username}</td>
+            <td style="padding: 12px;">Lv.${u.level || 1}</td>
+            <td style="padding: 12px; color: var(--gold);">${u.totalXP || 0}</td>
+            <td style="padding: 12px;">${u.testsTaken || 0}</td>
+            <td style="padding: 12px;">${dateStr}</td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = html || '<tr><td colspan="5" style="text-align:center; padding: 20px;">No students found.</td></tr>';
+    } catch (e) {
+      console.error(e);
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--incorrect); padding: 20px;">Failed to load data. Ensure you have permission.</td></tr>';
+    }
   },
 
   /* ── dashboard ───────────────────────────────────── */
@@ -463,6 +503,12 @@ const app = {
       document.getElementById('hero-title-default')?.classList.add('hidden');
       document.getElementById('smart-review-btn-wrap')?.classList.remove('hidden');
       document.getElementById('app-tabs')?.classList.remove('hidden');
+
+      if (Auth.isAdmin()) {
+        document.getElementById('tab-btn-admin')?.classList.remove('hidden');
+      } else {
+        document.getElementById('tab-btn-admin')?.classList.add('hidden');
+      }
       
       // Switch to dashboard tab by default when navigating to dashboard
       this.switchTab('dashboard');
@@ -943,10 +989,11 @@ const app = {
       if (i === idx && !isCorrect) btn.classList.add('incorrect');
     });
 
-    // Explanation
-    if (q.explanation) {
-      document.getElementById('expl-text').textContent = this._t(q, 'explanation');
+    // Explanation (Only show on mistake)
+    if (!isCorrect) {
+      document.getElementById('expl-text').textContent = q.explanation ? this._t(q, 'explanation') : (this.lang === 'en' ? 'The correct answer is highlighted in green. Please review the concept.' : '正確答案已標示為綠色，請複習此概念。');
       document.getElementById('explanation-box').classList.remove('hidden');
+      document.getElementById('btn-next').childNodes[0].textContent = this.lang === 'en' ? 'Continue ' : '繼續 ';
     }
 
     document.getElementById('pill-correct').textContent = this.correct;
