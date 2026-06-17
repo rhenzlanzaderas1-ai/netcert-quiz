@@ -222,11 +222,11 @@ window.Kahoot = {
         if (bar) bar.style.height = Math.round((c / playerCount) * 100) + '%';
         if (cnt) cnt.textContent = c;
       });
+      const totalPlayers = Object.keys(this._players || {}).length;
       const el = document.getElementById('k-answered-count');
-      if (el) el.textContent = total + ' answered';
+      if (el) el.textContent = total + ' / ' + totalPlayers + ' answered';
       
       // Auto-advance if all players answered
-      const totalPlayers = Object.keys(this._players || {}).length;
       if (totalPlayers > 0 && total >= totalPlayers && this._timeLeft > 0) {
         this._timeLeft = 0;
       }
@@ -497,7 +497,7 @@ window.Kahoot = {
   /* ── RENDER: Host Question ──────────────────────── */
   _renderHostQuestion(q) {
     this._showKahootView('host-question');
-    const colors = ['#b32034', '#155eb0', '#c98616', '#228a41'];
+    const colors = ['rgba(179,32,52,0.85)', 'rgba(21,94,176,0.85)', 'rgba(201,134,22,0.85)', 'rgba(34,138,65,0.85)'];
     const letters = ['A','B','C','D'];
     const icons = ['▲','◆','●','■'];
     document.getElementById('k-q-num').textContent = `Q${this._qIdx+1} / ${this._questions.length}`;
@@ -520,7 +520,7 @@ window.Kahoot = {
   _renderPlayerQuestion(currentQ) {
     if (!currentQ) return;
     this._showKahootView('player-question');
-    const colors = ['#b32034', '#155eb0', '#c98616', '#228a41'];
+    const colors = ['rgba(179,32,52,0.85)', 'rgba(21,94,176,0.85)', 'rgba(201,134,22,0.85)', 'rgba(34,138,65,0.85)'];
     const icons  = ['▲','◆','●','■'];
     document.getElementById('k-pq-num').textContent = `Q${(currentQ.idx||0)+1}`;
     const overlay = document.getElementById('k-player-waiting-overlay');
