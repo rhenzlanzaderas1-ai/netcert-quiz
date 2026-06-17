@@ -4,5 +4,6 @@ window.firebaseConfig = {
   projectId: "netcert-quiz",
   storageBucket: "netcert-quiz.firebasestorage.app",
   messagingSenderId: "820211250869",
-  appId: "1:820211250869:web:1f4c463288f193abedf0fc"
+  appId: "1:820211250869:web:1f4c463288f193abedf0fc",
+  databaseURL: "https://netcert-quiz-default-rtdb.asia-southeast1.firebasedatabase.app"
 };

@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+TC:wght@400;500;600;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css?v=3">
+  <link rel="stylesheet" href="css/kahoot.css?v=1">
   
   <!-- PWA Settings -->
   <link rel="manifest" href="manifest.json">
@@ -129,6 +130,11 @@
         <p class="login-hint" style="margin-top:15px; cursor:pointer;" onclick="app.toggleAuthMode()">
           <span id="auth-toggle-text">Need an account? <strong style="color:var(--accent)">Register here</strong></span>
         </p>
+        <div style="margin-top:16px; text-align:center;">
+          <button onclick="app.showKahootJoin()" style="background:none;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.55);padding:10px 22px;border-radius:50px;font-size:0.85rem;cursor:pointer;transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='none'">
+            🎮 Join a Game (no login needed)
+          </button>
+        </div>
       </div>
     </div>
   </section>
@@ -157,6 +163,10 @@
       <button class="tab-btn hidden" onclick="app.switchTab('admin')" id="tab-btn-admin">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
         <span style="color:var(--gold)">Admin</span>
+      </button>
+      <button class="tab-btn" onclick="app.startKahootHost()" id="tab-btn-kahoot">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        <span>Play</span>
       </button>
     </nav>
 
@@ -562,21 +572,209 @@
 
   </section>
 
+  <!-- ── KAHOOT VIEW ─────────────────────────────────── -->
+  <section class="view hidden" id="view-kahoot">
+
+    <!-- Sub-view: Host Setup -->
+    <div id="k-view-setup" class="k-sub-view">
+      <button class="k-back-btn" onclick="Kahoot.cleanup(); app.navigateTo('dashboard')">← Back</button>
+      <button class="k-mute-btn" id="k-mute-btn" onclick="Kahoot.toggleMute()">🔊</button>
+      <div class="k-setup-card" style="margin:auto;">
+        <div class="k-setup-title">🎮 <span>NetC</span> Play</div>
+        <div class="k-setup-sub">Host a real-time quiz for your class</div>
+        <div class="k-form-group">
+          <label class="k-form-label">Category</label>
+          <select id="k-cat-select" class="k-form-select"></select>
+        </div>
+        <div class="k-form-group">
+          <label class="k-form-label">Number of Questions</label>
+          <select id="k-qcount-select" class="k-form-select">
+            <option value="5">5 Questions</option>
+            <option value="10" selected>10 Questions</option>
+            <option value="20">20 Questions</option>
+            <option value="30">30 Questions</option>
+          </select>
+        </div>
+        <div class="k-form-group">
+          <label class="k-form-label">Time per Question</label>
+          <select id="k-time-select" class="k-form-select">
+            <option value="10">10 seconds</option>
+            <option value="20" selected>20 seconds</option>
+            <option value="30">30 seconds</option>
+          </select>
+        </div>
+        <button class="k-create-btn" onclick="app.createKahootRoom()">🚀 Create Room</button>
+        <div class="k-divider"><span>OR</span></div>
+        <button class="k-join-link-btn" onclick="app.showKahootJoin()">📱 Join a Game with PIN</button>
+      </div>
+    </div>
+
+    <!-- Sub-view: Player Join -->
+    <div id="k-view-join" class="k-sub-view">
+      <button class="k-back-btn" onclick="Kahoot.cleanup(); app.navigateTo('dashboard')">← Back</button>
+      <div class="k-join-card" style="margin:auto;">
+        <div class="k-join-title">🎮 Join Game</div>
+        <div class="k-join-sub">Enter the PIN shown on screen</div>
+        <div class="k-form-group">
+          <label class="k-form-label">Game PIN</label>
+          <input id="k-pin-input" class="k-form-input" type="number" placeholder="Enter 6-digit PIN" maxlength="6" style="text-align:center;font-size:1.4rem;letter-spacing:0.2em;font-weight:800;">
+        </div>
+        <div class="k-form-group">
+          <label class="k-form-label">Your Nickname</label>
+          <input id="k-nick-input" class="k-form-input" type="text" placeholder="Enter your nickname" maxlength="16">
+        </div>
+        <button class="k-join-btn" onclick="app.joinKahootGame()">Join!</button>
+        <div class="k-join-error" id="k-join-error"></div>
+      </div>
+    </div>
+
+    <!-- Sub-view: Lobby (Host) -->
+    <div id="k-view-lobby" class="k-sub-view" style="overflow-y:auto;padding-bottom:30px;">
+      <button class="k-back-btn" onclick="if(confirm('Cancel game?')){Kahoot.cleanup();app.navigateTo('dashboard');}">✕ Cancel</button>
+      <button class="k-mute-btn" id="k-mute-btn" onclick="Kahoot.toggleMute()">🔊</button>
+      <div class="k-pin-section">
+        <div class="k-pin-label">Game PIN</div>
+        <div class="k-pin-display" id="k-pin-display">------</div>
+        <div class="k-player-count-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span id="k-player-count">0</span> players joined
+        </div>
+        <div class="k-url-hint">Ask students to visit the site and click "Join a Game"</div>
+        <div class="k-music-viz"><div class="k-viz-bar"></div><div class="k-viz-bar"></div><div class="k-viz-bar"></div><div class="k-viz-bar"></div><div class="k-viz-bar"></div></div>
+      </div>
+      <div class="k-player-grid" id="k-player-list"></div>
+      <button class="k-start-btn" id="k-start-btn" onclick="Kahoot.startGame()" disabled>⏳ Waiting for players...</button>
+    </div>
+
+    <!-- Sub-view: Player Waiting -->
+    <div id="k-view-player-waiting" class="k-sub-view">
+      <button class="k-back-btn" onclick="if(confirm('Leave game?')){Kahoot.cleanup();app.navigateTo('dashboard');}">✕ Leave</button>
+      <div class="k-waiting-wrap">
+        <div class="k-waiting-avatar" id="k-waiting-avatar">?</div>
+        <div class="k-waiting-name" id="k-waiting-name">You</div>
+        <div class="k-waiting-status">
+          Waiting for host to start
+          <span class="k-waiting-dots"><span></span><span></span><span></span></span>
+        </div>
+        <div class="k-music-viz" style="margin-top:24px;"><div class="k-viz-bar"></div><div class="k-viz-bar"></div><div class="k-viz-bar"></div><div class="k-viz-bar"></div><div class="k-viz-bar"></div></div>
+      </div>
+    </div>
+
+    <!-- Sub-view: Host Question -->
+    <div id="k-view-host-question" class="k-sub-view" style="overflow:hidden;">
+      <div class="k-q-header">
+        <span class="k-q-num" id="k-q-num">Q1 / 10</span>
+        <div class="k-timer-wrap">
+          <svg class="k-timer-ring-svg" width="56" height="56" viewBox="0 0 100 100">
+            <circle class="k-timer-ring-bg" cx="50" cy="50" r="45"/>
+            <circle class="k-timer-ring-fg" id="k-timer-ring-fg" cx="50" cy="50" r="45"/>
+          </svg>
+          <span class="k-timer-num" id="k-timer-num">20</span>
+        </div>
+        <span class="k-answered-count" id="k-answered-count">0 answered</span>
+      </div>
+      <div class="k-q-text-wrap">
+        <div class="k-q-text" id="k-q-text"></div>
+      </div>
+      <div class="k-host-answers-grid" id="k-host-opts"></div>
+    </div>
+
+    <!-- Sub-view: Player Question -->
+    <div id="k-view-player-question" class="k-sub-view" style="position:relative;">
+      <div class="k-q-header">
+        <span class="k-q-num" id="k-pq-num">Q1</span>
+        <div class="k-timer-wrap">
+          <svg class="k-timer-ring-svg" width="56" height="56" viewBox="0 0 100 100">
+            <circle class="k-timer-ring-bg" cx="50" cy="50" r="45"/>
+            <circle class="k-timer-ring-fg" id="k-timer-ring-fg" cx="50" cy="50" r="45"/>
+          </svg>
+          <span class="k-timer-num" id="k-timer-num">20</span>
+        </div>
+        <span style="font-size:0.75rem;color:rgba(255,255,255,0.4);" id="k-my-score-display">0 pts</span>
+      </div>
+      <div class="k-q-text-wrap">
+        <div class="k-q-text" id="k-pq-text"></div>
+      </div>
+      <div class="k-player-ans-grid" id="k-player-answers"></div>
+      <div id="k-player-waiting-overlay" class="k-player-waiting-overlay hidden">
+        <div class="k-waiting-dots"><span></span><span></span><span></span></div>
+        <div class="k-player-answered-msg">Answer submitted! Waiting for results...</div>
+      </div>
+    </div>
+
+    <!-- Sub-view: Leaderboard (shared) -->
+    <div id="k-view-leaderboard" class="k-sub-view" style="overflow-y:auto;">
+      <div class="k-lb-header">
+        <div class="k-lb-title">🏅 Leaderboard</div>
+        <div class="k-correct-answer" id="k-correct-answer"></div>
+      </div>
+      <div class="k-lb-list" id="k-lb-list"></div>
+      <div class="k-personal-result hidden" id="k-personal-result"></div>
+      <div class="k-lb-footer">
+        <button class="k-next-btn" id="k-next-btn" onclick="Kahoot.nextQuestion()">▶ Next</button>
+      </div>
+    </div>
+
+    <!-- Sub-view: Podium (shared) -->
+    <div id="k-view-podium" class="k-sub-view" style="overflow-y:auto;">
+      <div class="k-podium-header">
+        <div class="k-podium-title">🏆 Final Results!</div>
+      </div>
+      <div class="k-podium-stage">
+        <!-- 2nd place -->
+        <div class="k-podium-position" id="k-pod-2">
+          <div class="k-pod-crown">🥈</div>
+          <div class="k-pod-avatar silver">2</div>
+          <div class="k-pod-name">—</div>
+          <div class="k-pod-score"></div>
+          <div class="k-pod-block second">2nd</div>
+        </div>
+        <!-- 1st place -->
+        <div class="k-podium-position" id="k-pod-1">
+          <div class="k-pod-crown">🥇</div>
+          <div class="k-pod-avatar gold">1</div>
+          <div class="k-pod-name">—</div>
+          <div class="k-pod-score"></div>
+          <div class="k-pod-block first">1st</div>
+        </div>
+        <!-- 3rd place -->
+        <div class="k-podium-position" id="k-pod-3">
+          <div class="k-pod-crown">🥉</div>
+          <div class="k-pod-avatar bronze">3</div>
+          <div class="k-pod-name">—</div>
+          <div class="k-pod-score"></div>
+          <div class="k-pod-block third">3rd</div>
+        </div>
+      </div>
+      <div class="k-final-section">
+        <div class="k-final-title">All Rankings</div>
+        <div class="k-lb-list" id="k-final-list"></div>
+      </div>
+      <div class="k-podium-footer">
+        <button class="k-exit-btn" onclick="Kahoot.cleanup(); app.navigateTo('dashboard');">Back to Dashboard</button>
+      </div>
+    </div>
+
+  </section>
+
 </main>
 
 <!-- Firebase SDK & Config -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 <script src="js/firebase-config.js"></script>
 <script>
   firebase.initializeApp(window.firebaseConfig);
   window.db = firebase.firestore();
+  window.rtdb = firebase.database();
 </script>
 
 <script src="data/questions.js?v=2"></script>
 <script src="data/questions_pdf.js?v=2"></script>
 <script src="js/auth.js?v=3"></script>
 <script src="js/progress.js?v=3"></script>
-<script src="js/app.js?v=3"></script>
+<script src="js/app.js?v=4"></script>
+<script src="js/kahoot.js?v=1"></script>
 </body>
 </html>
