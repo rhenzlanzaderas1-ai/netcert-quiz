@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+TC:wght@400;500;600;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=2">
 </head>
 <body>
 
@@ -247,7 +247,7 @@
     <!-- Tab Content: Info -->
     <div id="tab-info" class="tab-content hidden">
       <div style="margin-top: 24px; padding: 24px; background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 16px; text-align: center;">
-        <img src="null.png?v=2" alt="Creator Avatar" style="width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--accent); margin-bottom: 16px; box-shadow: 0 4px 12px var(--maroon-glow); object-fit: cover;">
+        <img src="avatar.png?v=3" alt="Creator Avatar" style="width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--accent); margin-bottom: 16px; box-shadow: 0 4px 12px var(--maroon-glow); object-fit: cover;">
         <h2 style="font-size: 1.4rem; color: var(--text-hi); margin-bottom: 8px;">About NetC</h2>
         <p style="color: var(--text-mid); font-size: 0.95rem; margin-bottom: 16px; line-height: 1.6;">
           This study website was created by <strong>s25115410</strong> as an interactive learning tool.
@@ -263,10 +263,10 @@
             <strong>Disclaimer:</strong> This application is strictly for personal review and educational purposes. All intellectual property belongs to the rightful owners and certification bodies. If you are the owner of this material and wish for it to be taken down, please contact me directly.
           </p>
           <div style="text-align: center;">
-            <a href="mailto:rhenzlanzaderas1@gmail.com?subject=Takedown Request: NetC Exam Reviewer" style="display: inline-flex; align-items: center; gap: 8px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-hi); padding: 8px 16px; border-radius: 8px; font-size: 0.9rem; text-decoration: none; transition: 0.2s ease;">
+            <button onclick="navigator.clipboard.writeText('rhenzlanzaderas1@gmail.com').then(() => { if(window.app) app.toast('Email copied to clipboard!', '📋', 'success'); else alert('Copied: rhenzlanzaderas1@gmail.com'); })" style="display: inline-flex; align-items: center; gap: 8px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-hi); padding: 8px 16px; border-radius: 8px; font-size: 0.9rem; cursor: pointer; transition: 0.2s ease;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-              Contact Developer
-            </a>
+              Copy Developer Email
+            </button>
           </div>
         </div>
       </div>
