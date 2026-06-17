@@ -497,23 +497,23 @@ window.Kahoot = {
   /* ── RENDER: Host Question ──────────────────────── */
   _renderHostQuestion(q) {
     this._showKahootView('host-question');
-    const colors = ['#e74c3c','#3498db','#f39c12','#2ecc71'];
+    const colors = ['#b32034', '#155eb0', '#c98616', '#228a41'];
     const letters = ['A','B','C','D'];
+    const icons = ['▲','◆','●','■'];
     document.getElementById('k-q-num').textContent = `Q${this._qIdx+1} / ${this._questions.length}`;
     document.getElementById('k-q-text').textContent = q.question;
     document.getElementById('k-answered-count').textContent = '0 answered';
     const grid = document.getElementById('k-host-opts');
     if (!grid) return;
     grid.innerHTML = q.options.map((opt, i) => `
-      <div class="k-host-option" style="border-color:${colors[i]}">
+      <div class="k-host-option" style="background:${colors[i]}">
+        <div class="k-answer-bar" id="k-bar-${i}"></div>
         <div class="k-host-opt-row">
-          <span class="k-opt-letter" style="background:${colors[i]}">${letters[i]}</span>
+          <span class="k-opt-letter">${icons[i]}</span>
           <span class="k-opt-text">${opt}</span>
         </div>
-        <div class="k-bar-section">
-          <div class="k-answer-bar" id="k-bar-${i}" style="background:${colors[i]};height:2px;width:24px;border-radius:4px 4px 0 0;transition:height .4s;"></div>
-          <span class="k-bar-count" id="k-bar-count-${i}">0</span>
-        </div>
+        <div class="k-circle-outline"></div>
+        <span class="k-bar-count" id="k-bar-count-${i}">0</span>
       </div>`).join('');
   },
 
