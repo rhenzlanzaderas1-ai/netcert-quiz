@@ -1742,7 +1742,7 @@ body::before {
   .login-card { padding: 32px 22px 28px; }
   .nav-user-info { display: none; }
   .nav-user-bar  { gap: 4px; padding: 4px 8px; }
-  .nav-title { display: none; } /* Hide "NetCert" text to save space */
+  .nav-title { display: none; } /* Hide "NetC" text to save space */
   .navbar { padding: 0 8px; gap: 4px; }
   .nav-actions { gap: 2px; }
   .lang-btn { padding: 4px 6px; font-size: 0.75rem; }

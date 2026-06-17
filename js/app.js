@@ -1,5 +1,5 @@
 /**
- * NetCert Review System — Enhanced Interactive Controller
+ * NetC Review System — Enhanced Interactive Controller
  * Black & Maroon themed SPA for Taiwanese Networking Certification prep.
  *
  * Interactive features:
@@ -625,8 +625,7 @@ const app = {
              role="button" aria-label="${displayName}, ${count} questions">
           <div class="cat-icon" style="background:${cfg.color}1a;color:${cfg.color}">${cfg.icon}</div>
           <h3>${displayName}</h3>
-          <p class="cat-sub">${this._s('work_item')} ${idx + 1}</p>
-          <span class="cat-badge">${subText}</span>
+          <span class="cat-badge" style="margin-top: 8px;">${subText}</span>
           ${progressBadge}
         </div>`;
     }).join('');
@@ -652,8 +651,56 @@ const app = {
     this.applyLang();
   },
 
+  /* ── session state ───────────────────────────────── */
+  _saveQuizSession() {
+    if (!this.quizQ || this.quizQ.length === 0 || this.quizIdx >= this.quizQ.length) return;
+    const session = {
+      category: this.category,
+      quizQIds: this.quizQ.map(q => q.id || q.question_id || q.question),
+      quizIdx: this.quizIdx,
+      correct: this.correct,
+      answered: this.answered,
+      streak: this.streak,
+      wrongAnswersIds: this.wrongAnswers.map(q => q.id || q.question_id || q.question),
+      sessionXP: this.sessionXP
+    };
+    localStorage.setItem(`nc_session_${this.category}`, JSON.stringify(session));
+  },
+  _clearQuizSession() {
+    localStorage.removeItem(`nc_session_${this.category}`);
+  },
+  _resumeSession(s) {
+    const qMap = {};
+    ALL_QUESTIONS.forEach(q => { qMap[String(q.id || q.question_id || q.question)] = q; });
+    this.quizQ = s.quizQIds.map(id => qMap[String(id)]).filter(Boolean);
+    this.quizIdx = s.quizIdx;
+    this.correct = s.correct;
+    this.answered = s.answered;
+    this.streak = s.streak;
+    this.answeredQ = false;
+    this.wrongAnswers = s.wrongAnswersIds.map(id => qMap[String(id)]).filter(Boolean);
+    this.sessionXP = s.sessionXP;
+
+    this.navigateTo('quiz');
+    this._renderQuestion();
+  },
+
   /* ── quiz start ──────────────────────────────────── */
   startQuiz(onlyWrong = false) {
+    const raw = localStorage.getItem(`nc_session_${this.category}`);
+    if (!onlyWrong && raw) {
+      try {
+        const s = JSON.parse(raw);
+        if (s.quizIdx > 0 && s.quizIdx < s.quizQIds.length) {
+          if (confirm(this.lang === 'en' ? "Resume where you left off? (Cancel to start over)" : "有未完成的測驗進度。要繼續上一次的進度嗎？(按取消將重新開始)")) {
+            this._resumeSession(s);
+            return;
+          }
+        }
+      } catch(e) {}
+      this._clearQuizSession();
+    }
+
     const pool = onlyWrong && this.wrongAnswers.length
       ? this.wrongAnswers.slice()
       : ALL_QUESTIONS.filter(q => q.category === this.category);
@@ -734,6 +781,20 @@ const app = {
       this._buildReviewList(ALL_QUESTIONS);
       this._renderFlashcard(ALL_QUESTIONS);
     } else {
+      const raw = localStorage.getItem(`nc_session_${this.category}`);
+      if (raw) {
+        try {
+          const s = JSON.parse(raw);
+          if (s.quizIdx > 0 && s.quizIdx < s.quizQIds.length) {
+            if (confirm(this.lang === 'en' ? "Resume where you left off? (Cancel to start over)" : "有未完成的測驗進度。要繼續上一次的進度嗎？(按取消將重新開始)")) {
+              this._resumeSession(s);
+              return;
+            }
+          }
+        } catch(e) {}
+        this._clearQuizSession();
+      }
+
       this.quizQ = this._shuffle([...ALL_QUESTIONS]);
       this.quizIdx = 0;
       this.correct = 0;
@@ -947,7 +1008,9 @@ const app = {
   nextQuestion() {
     clearInterval(this.timerHandle);
     this.quizIdx++;
+    this._saveQuizSession();
     if (this.quizIdx >= this.quizQ.length) {
+      this._clearQuizSession();
       this._showResults();
     } else {
       this._renderQuestion();
