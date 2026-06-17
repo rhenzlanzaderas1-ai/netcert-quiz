@@ -376,13 +376,24 @@ window.Kahoot = {
     if (this._hasAnswered) return;
     this._hasAnswered = true;
 
+    // Dim all buttons, highlight chosen one
     document.querySelectorAll('.k-answer-btn').forEach((btn, i) => {
       btn.disabled = true;
+      if (i !== optionIdx) btn.style.opacity = '0.25';
       if (i === optionIdx) btn.classList.add('k-selected');
     });
 
-    const el = document.getElementById('k-player-waiting-overlay');
-    if (el) el.classList.remove('hidden');
+    // Show the premium "locked in" waiting overlay
+    const overlay = document.getElementById('k-player-waiting-overlay');
+    if (overlay) {
+      overlay.innerHTML = `
+        <div class="k-locked-icon">✓</div>
+        <div class="k-locked-title">Answer Locked In!</div>
+        <div class="k-locked-sub">Waiting for everyone to answer</div>
+        <div class="k-waiting-dots large"><span></span><span></span><span></span></div>
+      `;
+      overlay.classList.remove('hidden');
+    }
 
     await this.gameRef.child('answers/' + this.playerKey).set({
       optionIdx,

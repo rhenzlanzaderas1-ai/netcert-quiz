@@ -437,28 +437,6 @@ const app = {
   },
 
   /* ── Kahoot integration methods ─────────────────── */
-  startKahootHost() {
-    if (!Auth.isLoggedIn()) {
-      this.toast('Please log in to host a game', '🔒', 'error');
-      return;
-    }
-    // Populate category dropdown
-    const sel = document.getElementById('k-cat-select');
-    if (sel) {
-      const cats = this._getSortedCategories();
-      sel.innerHTML = `<option value="__ALL__">All Categories (${ALL_QUESTIONS.length} questions)</option>` +
-        cats.map(c => {
-          const cnt = ALL_QUESTIONS.filter(q => q.category === c).length;
-          return `<option value="${c}">${c} (${cnt})</option>`;
-        }).join('');
-    }
-    // Show setup sub-view
-    document.querySelectorAll('.k-sub-view').forEach(el => el.classList.remove('k-active'));
-    const setupEl = document.getElementById('k-view-setup');
-    if (setupEl) setupEl.classList.add('k-active');
-    this.navigateTo('kahoot');
-  },
-
   showKahootJoin() {
     document.querySelectorAll('.k-sub-view').forEach(el => el.classList.remove('k-active'));
     const joinEl = document.getElementById('k-view-join');
@@ -500,13 +478,24 @@ const app = {
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.classList.toggle('active', btn.id === `tab-btn-${tabId}`);
     });
-    ['dashboard', 'progress', 'study', 'info', 'admin'].forEach(id => {
+    ['dashboard', 'progress', 'study', 'info', 'admin', 'kahoot'].forEach(id => {
       const el = document.getElementById(`tab-${id}`);
       if (el) el.classList.toggle('hidden', id !== tabId);
     });
     
     if (tabId === 'admin') {
       this.loadAdminData();
+    } else if (tabId === 'kahoot') {
+      // Populate category dropdown when opening the Kahoot setup tab
+      const sel = document.getElementById('k-cat-select');
+      if (sel && sel.options.length === 0) {
+        const cats = this._getSortedCategories();
+        sel.innerHTML = `<option value="__ALL__">All Categories (${ALL_QUESTIONS.length} questions)</option>` +
+          cats.map(c => {
+            const cnt = ALL_QUESTIONS.filter(q => q.category === c).length;
+            return `<option value="${c}">${c} (${cnt})</option>`;
+          }).join('');
+      }
     }
   },
 
@@ -579,8 +568,10 @@ const app = {
 
       if (Auth.isAdmin()) {
         document.getElementById('tab-btn-admin')?.classList.remove('hidden');
+        document.getElementById('tab-btn-kahoot')?.classList.remove('hidden');
       } else {
         document.getElementById('tab-btn-admin')?.classList.add('hidden');
+        document.getElementById('tab-btn-kahoot')?.classList.add('hidden');
       }
       
       // Switch to dashboard tab by default when navigating to dashboard

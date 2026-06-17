@@ -107,7 +107,7 @@
 
 /* ── Reset ─────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; overscroll-behavior-y: none; }
 
 body {
   font-family: var(--font);
@@ -119,7 +119,8 @@ body {
   overflow-x: hidden;
   width: 100vw;
   max-width: 100%;
-  overscroll-behavior: none;
+  overscroll-behavior-y: none;
+  overscroll-behavior-x: none;
 }
 
 /* Scrollbar */
@@ -991,6 +992,11 @@ body {
 .hidden { display: none !important; }
 
 /* ── Login View ──────────────────────────────────── */
+#view-login {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 .login-wrap {
   min-height: calc(100vh - 62px);
   display: flex;
@@ -998,6 +1004,7 @@ body {
   justify-content: center;
   padding: 40px 20px;
   position: relative;
+  overscroll-behavior: none;
 }
 
 .login-card {

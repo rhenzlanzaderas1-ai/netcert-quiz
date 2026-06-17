@@ -166,7 +166,7 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
         <span style="color:var(--gold)">Admin</span>
       </button>
-      <button class="tab-btn" onclick="app.startKahootHost()" id="tab-btn-kahoot">
+      <button class="tab-btn hidden" onclick="app.switchTab('kahoot')" id="tab-btn-kahoot">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         <span>Play</span>
       </button>
@@ -320,6 +320,38 @@
         </div>
       </div>
     </div> <!-- /tab-admin -->
+
+    <!-- Tab Content: Kahoot Setup -->
+    <div id="tab-kahoot" class="tab-content hidden">
+      <div style="margin-top: 24px; display:flex; justify-content:center;">
+        <div class="k-setup-card">
+          <div class="k-setup-title">🎮 <span>NetC</span> Play</div>
+          <div class="k-setup-sub">Host a real-time quiz for your class</div>
+          <div class="k-form-group">
+            <label class="k-form-label">Category</label>
+            <select id="k-cat-select" class="k-form-select"></select>
+          </div>
+          <div class="k-form-group">
+            <label class="k-form-label">Number of Questions</label>
+            <select id="k-qcount-select" class="k-form-select">
+              <option value="5">5 Questions</option>
+              <option value="10" selected>10 Questions</option>
+              <option value="20">20 Questions</option>
+              <option value="30">30 Questions</option>
+            </select>
+          </div>
+          <div class="k-form-group">
+            <label class="k-form-label">Time per Question</label>
+            <select id="k-time-select" class="k-form-select">
+              <option value="10">10 seconds</option>
+              <option value="20" selected>20 seconds</option>
+              <option value="30">30 seconds</option>
+            </select>
+          </div>
+          <button class="k-create-btn" onclick="app.createKahootRoom()">🚀 Create Room</button>
+        </div>
+      </div>
+    </div> <!-- /tab-kahoot -->
 
   </section>
 
@@ -576,40 +608,6 @@
 
   <!-- ── KAHOOT VIEW ─────────────────────────────────── -->
   <section class="view hidden" id="view-kahoot">
-
-    <!-- Sub-view: Host Setup -->
-    <div id="k-view-setup" class="k-sub-view">
-      <button class="k-back-btn" onclick="Kahoot.cleanup(); app.navigateTo('dashboard')">← Back</button>
-      <button class="k-mute-btn" id="k-mute-btn" onclick="Kahoot.toggleMute()">🔊</button>
-      <div class="k-setup-card" style="margin:auto;">
-        <div class="k-setup-title">🎮 <span>NetC</span> Play</div>
-        <div class="k-setup-sub">Host a real-time quiz for your class</div>
-        <div class="k-form-group">
-          <label class="k-form-label">Category</label>
-          <select id="k-cat-select" class="k-form-select"></select>
-        </div>
-        <div class="k-form-group">
-          <label class="k-form-label">Number of Questions</label>
-          <select id="k-qcount-select" class="k-form-select">
-            <option value="5">5 Questions</option>
-            <option value="10" selected>10 Questions</option>
-            <option value="20">20 Questions</option>
-            <option value="30">30 Questions</option>
-          </select>
-        </div>
-        <div class="k-form-group">
-          <label class="k-form-label">Time per Question</label>
-          <select id="k-time-select" class="k-form-select">
-            <option value="10">10 seconds</option>
-            <option value="20" selected>20 seconds</option>
-            <option value="30">30 seconds</option>
-          </select>
-        </div>
-        <button class="k-create-btn" onclick="app.createKahootRoom()">🚀 Create Room</button>
-        <div class="k-divider"><span>OR</span></div>
-        <button class="k-join-link-btn" onclick="app.showKahootJoin()">📱 Join a Game with PIN</button>
-      </div>
-    </div>
 
     <!-- Sub-view: Player Join -->
     <div id="k-view-join" class="k-sub-view">
