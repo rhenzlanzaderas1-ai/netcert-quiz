@@ -671,13 +671,16 @@
       <!-- Floating Header Elements -->
       <div class="k-q-header" style="background:transparent; border:none; position:absolute; top:0; left:0; right:0; z-index:50; pointer-events:none;">
         
-        <!-- Timer (Top Left) -->
-        <div class="k-timer-wrap" style="pointer-events:auto;">
-          <svg class="k-timer-ring-svg" width="56" height="56" viewBox="0 0 100 100">
-            <circle class="k-timer-ring-bg" cx="50" cy="50" r="45"/>
-            <circle class="k-timer-ring-fg" id="k-timer-ring-fg" cx="50" cy="50" r="45"/>
-          </svg>
-          <span class="k-timer-num" id="k-timer-num">20</span>
+        <!-- Timer & Q Num (Top Left) -->
+        <div style="display:flex; align-items:center; gap: 16px; pointer-events:auto;">
+          <div class="k-timer-wrap">
+            <svg class="k-timer-ring-svg" width="56" height="56" viewBox="0 0 100 100">
+              <circle class="k-timer-ring-bg" cx="50" cy="50" r="45"/>
+              <circle class="k-timer-ring-fg" id="k-timer-ring-fg" cx="50" cy="50" r="45"/>
+            </svg>
+            <span class="k-timer-num" id="k-timer-num">20</span>
+          </div>
+          <span id="k-q-num" style="font-size:1.2rem;font-weight:800;color:rgba(255,255,255,0.6);">Q1 / 10</span>
         </div>
         
         <!-- Controls (Top Right) -->
