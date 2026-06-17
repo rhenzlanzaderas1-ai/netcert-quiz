@@ -437,7 +437,7 @@ const app = {
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.classList.toggle('active', btn.id === `tab-btn-${tabId}`);
     });
-    ['dashboard', 'progress', 'study'].forEach(id => {
+    ['dashboard', 'progress', 'study', 'info'].forEach(id => {
       const el = document.getElementById(`tab-${id}`);
       if (el) el.classList.toggle('hidden', id !== tabId);
     });

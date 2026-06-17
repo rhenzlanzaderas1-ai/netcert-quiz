@@ -148,6 +148,10 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
         <span>Study</span>
       </button>
+      <button class="tab-btn" onclick="app.switchTab('info')" id="tab-btn-info">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        <span>Info</span>
+      </button>
     </nav>
 
     <!-- Tab Content: Dashboard -->
@@ -235,6 +239,24 @@
       <p class="section-label" data-i18n="section_label" style="margin-top:20px;">學習類別</p>
       <div class="category-grid" id="category-grid"></div>
     </div> <!-- /tab-study -->
+
+    <!-- Tab Content: Info -->
+    <div id="tab-info" class="tab-content hidden">
+      <div style="margin-top: 24px; padding: 24px; background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 16px; text-align: center;">
+        <img src="null.png" alt="Creator Avatar" style="width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--accent); margin-bottom: 16px; box-shadow: 0 4px 12px var(--maroon-glow);">
+        <h2 style="font-size: 1.4rem; color: var(--text-hi); margin-bottom: 8px;">About NetC</h2>
+        <p style="color: var(--text-mid); font-size: 0.95rem; margin-bottom: 16px; line-height: 1.6;">
+          This study website was created by <strong>Rhenz Lanzaderas</strong> as an interactive learning tool.
+        </p>
+        
+        <div style="padding-top: 16px; border-top: 1px solid var(--border-subtle);">
+          <p style="color: var(--text-lo); font-size: 0.85rem; line-height: 1.5;">
+            <strong>Disclaimer & Copyright Claim:</strong><br>
+            All educational materials, questions, and networking concepts provided within this application belong to their rightful original owners and respective certification bodies. This application is strictly for educational and personal review purposes. Full credits to the actual sources of the networking certification materials.
+          </p>
+        </div>
+      </div>
+    </div> <!-- /tab-info -->
 
   </section>
 
