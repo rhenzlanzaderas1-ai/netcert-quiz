@@ -269,15 +269,15 @@ body {
   top: 55%;
   right: -2%;
   transform: translateY(-50%);
-  font-size: 11rem;
+  font-size: 8rem;
   font-weight: 900;
   line-height: 1;
-  color: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.05);
   white-space: nowrap;
   pointer-events: none;
   user-select: none;
   z-index: 0;
-  text-shadow: 0 4px 24px rgba(0,0,0,0.3);
+  text-shadow: 0 4px 24px rgba(0,0,0,0.15);
 }
 
 .hero-content { position: relative; z-index: 1; }
