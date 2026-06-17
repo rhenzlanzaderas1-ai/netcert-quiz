@@ -1,6 +1,23 @@
 {
+  "name": "netcert-quiz",
+  "version": "1.0.0",
+  "description": "Taiwan Network Certification Quiz App with Auth, XP, and Progress Tracking",
+  "scripts": {
+    "dev": "vercel dev",
+    "seed": "node scripts/seed-users.js",
+    "seed:dry": "node scripts/seed-users.js --dry",
+    "seed:local": "node scripts/seed-users.js --local",
+    "build": "echo Static site, no build needed"
+  },
+  "dependencies": {
+    "@vercel/kv": "^1.0.1",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.6.1",
+    "jsonwebtoken": "^9.0.3"
+  },
   "devDependencies": {
     "pdf-parse": "^2.4.5",
-    "pdfjs-dist": "^6.0.227"
+    "pdfjs-dist": "^6.0.227",
+    "xlsx": "^0.18.5"
   }
 }

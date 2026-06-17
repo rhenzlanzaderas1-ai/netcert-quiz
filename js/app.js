@@ -14,11 +14,15 @@
  *  • Dark / Light mode toggle (persisted)
  *  • Progress ring animation on results
  *  • Card shuffle & "restart failed only" option
+ *  • Auth integration (JWT login/logout)
+ *  • Progress tracking & XP system via /api/ backend
+ *  • Gamified dashboard with XP bar, level, streak
+ *  • Smart Review for hard/review/recent questions
  */
 
 const app = {
   /* ── state ───────────────────────────────────────── */
-  view: 'dashboard',
+  view: 'login',
   lang: 'zh',          // 'zh' | 'en'
   category: null,
   quizQ: [], quizIdx: 0,
@@ -29,6 +33,9 @@ const app = {
   reviewIdx: 0, reviewMode: 'list',
   cardFlipped: false,
   wrongAnswers: [],
+  sessionXP: 0,            // XP earned this quiz session
+  _currentTab: 'hard',     // smart-review active tab
+  _smartQuestions: [],     // questions for smart review quiz
 
   /* ── i18n strings ────────────────────────────────── */
   i18n: {
@@ -111,25 +118,25 @@ const app = {
   /* ── category config ─────────────────────────────── */
   cats: [
     { icon: '🌐', color: '#c4334a' },
-    { icon: '📐', color: '#c4334a' },  // 識圖與製圖
-    { icon: '🔧', color: '#b5451b' },  // 作業準備
-    { icon: '🔌', color: '#c07c2a' },  // 網路架設佈線
-    { icon: '💻', color: '#7b2d8b' },  // 網路元件及軟體
-    { icon: '🌐', color: '#1a5e8b' },  // 網路基礎概論
-    { icon: '📍', color: '#8b1a2a' },  // IP 位址
-    { icon: '🖧',  color: '#1a7a4a' },  // 網路設備
-    { icon: '🔒', color: '#5c3a8b' },  // 網路安全
-    { icon: '📡', color: '#2a5c8b' },  // 無線網路
-    { icon: '☁️', color: '#1a6b5a' },  // 網際網路服務
+    { icon: '📐', color: '#c4334a' },
+    { icon: '🔧', color: '#b5451b' },
+    { icon: '🔌', color: '#c07c2a' },
+    { icon: '💻', color: '#7b2d8b' },
+    { icon: '🌐', color: '#1a5e8b' },
+    { icon: '📍', color: '#8b1a2a' },
+    { icon: '🖧',  color: '#1a7a4a' },
+    { icon: '🔒', color: '#5c3a8b' },
+    { icon: '📡', color: '#2a5c8b' },
+    { icon: '☁️', color: '#1a6b5a' },
   ],
 
   /* ── boot ────────────────────────────────────────── */
-  init() {
+  async init() {
     // Apply saved theme (default dark)
     const theme = localStorage.getItem('nc-theme') || 'dark';
     document.documentElement.setAttribute('data-theme', theme);
 
-    // Build merged question bank (ALL_QUESTIONS + PDF_QUESTIONS)
+    // Build merged question bank
     ALL_QUESTIONS = buildQuestionBank();
     console.log(`Question bank loaded: ${ALL_QUESTIONS.length} total questions`);
 
@@ -137,20 +144,151 @@ const app = {
     const lang = localStorage.getItem('nc-lang') || 'zh';
     this.lang = lang;
     this._updateLangButtons();
-
-    this.buildDashboard();
     this.applyLang();
     this.bindGlobal();
 
-    // Inject toast container + confetti canvas
+    // Inject toast container + confetti canvas + binary rain canvas
     document.body.insertAdjacentHTML('beforeend',
       '<div class="toast-container" id="toasts"></div>' +
       '<canvas id="confetti-canvas"></canvas>' +
       '<canvas id="binary-rain-canvas"></canvas>'
     );
 
-    // Start the binary rain background
     this._startBinaryRain();
+
+    // ── Auth check ────────────────────────────────────
+    if (Auth.isLoggedIn()) {
+      await this._onLoginSuccess(Auth.currentUser(), false);
+    } else {
+      this.showLogin();
+    }
+  },
+
+  /* ── show login / dashboard ──────────────────────── */
+  showLogin() {
+    this._hideAllViews();
+    document.getElementById('view-login').classList.remove('hidden');
+    this.view = 'login';
+    // Hide nav user bar
+    document.getElementById('nav-user-bar')?.classList.add('hidden');
+    document.getElementById('btn-logout')?.classList.add('hidden');
+  },
+
+  async _onLoginSuccess(user, showWelcome = true) {
+    // Show nav user bar
+    this._updateNavUserBar(user);
+
+    // Load progress from server
+    try {
+      const data = await Progress.loadAll();
+      if (data.user) user = { ...user, ...data.user };
+    } catch (e) {
+      console.warn('Progress load failed:', e.message);
+    }
+
+    this.buildDashboard();
+    this.navigateTo('dashboard');
+
+    if (showWelcome && user) {
+      const shortName = this._getShortName(user.name);
+      this.toast(`歡迎回來，${shortName}！ 🎉`, '👋', 'success');
+    }
+  },
+
+  _getShortName(name) {
+    if (!name) return '';
+    // Extract English first name from "(FIRSTNAME LASTNAME)"
+    const en = name.match(/\(([^)]+)\)/);
+    if (en) return en[1].split(' ')[0];
+    return name.slice(0, 3);
+  },
+
+  /* ── handle login form submit ────────────────────── */
+  async handleLogin(event) {
+    event.preventDefault();
+    const studentId = document.getElementById('login-id').value.trim();
+    const password  = document.getElementById('login-pw').value;
+    const remember  = document.getElementById('login-remember').checked;
+
+    const btn     = document.getElementById('login-btn');
+    const errDiv  = document.getElementById('login-error');
+
+    // Reset error
+    errDiv.classList.add('hidden');
+    errDiv.textContent = '';
+    btn.disabled = true;
+    document.getElementById('login-btn-text').textContent = '登入中…';
+
+    try {
+      const result = await Auth.login(studentId, password, remember);
+      const user   = result.user;
+
+      // Daily XP bonus
+      if (result.xpGained > 0) {
+        setTimeout(() => this.toast(`+${result.xpGained} XP 每日登入獎勵！`, '⭐', 'success'), 800);
+      }
+
+      await this._onLoginSuccess(user, true);
+
+    } catch (err) {
+      errDiv.textContent = err.message === 'Failed to fetch'
+        ? '⚠️ Server unavailable — running in offline mode'
+        : `❌ ${err.message}`;
+      errDiv.classList.remove('hidden');
+
+      // Offline fallback — create a guest session using student ID
+      if (err.message === 'Failed to fetch' || err.message.includes('503')) {
+        this._offlineLogin(studentId, password);
+      }
+    } finally {
+      btn.disabled = false;
+      document.getElementById('login-btn-text').textContent = '登入 Sign In';
+    }
+  },
+
+  /* ── Offline fallback login (no server) ─────────── */
+  _offlineLogin(studentId, password) {
+    // For offline mode, accept login if password matches studentId (default)
+    // In production this should be removed — just for local dev without KV
+    if (String(studentId) === String(password) || password.length >= 6) {
+      const offlineUser = {
+        studentId, password: undefined,
+        name: `Student ${studentId}`,
+        role: '學生',
+        xp: 0, level: 1, streak: 0,
+      };
+      localStorage.setItem('nc-user', JSON.stringify(offlineUser));
+      // Generate a simple offline token (not secure, local only)
+      const fakeToken = btoa(JSON.stringify({ studentId, name: offlineUser.name, exp: Date.now()/1000 + 86400*7 })) + '.offline.' + btoa('{}');
+      localStorage.setItem('nc-jwt', fakeToken);
+      setTimeout(() => {
+        this._onLoginSuccess(offlineUser, true);
+        this.toast('⚠️ Offline mode — progress will not sync', 'ℹ️');
+      }, 500);
+    }
+  },
+
+  /* ── update nav user bar ─────────────────────────── */
+  _updateNavUserBar(user) {
+    if (!user) return;
+    const bar    = document.getElementById('nav-user-bar');
+    const avatar = document.getElementById('nav-avatar');
+    const name   = document.getElementById('nav-user-name');
+    const fill   = document.getElementById('nav-xp-fill');
+    const badge  = document.getElementById('nav-level-badge');
+    const logout = document.getElementById('btn-logout');
+
+    if (bar)    bar.classList.remove('hidden');
+    if (logout) logout.classList.remove('hidden');
+
+    if (avatar) avatar.textContent   = Auth.getInitials(user.name);
+    if (name)   name.textContent     = this._getShortName(user.name) || user.name;
+    if (badge)  badge.textContent    = `Lv.${user.level || 1}`;
+
+    if (fill) {
+      const pct = ((user.xp || 0) % 500) / 500 * 100;
+      fill.style.width = `${pct}%`;
+    }
   },
 
   /* ── binary rain background ──────────────────────── */
@@ -158,10 +296,8 @@ const app = {
     const canvas = document.getElementById('binary-rain-canvas');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-
     const FONT_SIZE = 14;
     const CHARS = '01';
-    // Mix in a few network-themed extras for variety
     const EXTRA = '10100111000110';
 
     let cols, drops, speeds, glows;
@@ -179,10 +315,8 @@ const app = {
     window.addEventListener('resize', resize);
 
     const draw = () => {
-      // Fade trail — semi-transparent overlay
       ctx.fillStyle = 'rgba(8, 5, 7, 0.18)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-
       ctx.font = `${FONT_SIZE}px 'Courier New', monospace`;
 
       for (let i = 0; i < cols; i++) {
@@ -191,19 +325,16 @@ const app = {
         const y = drops[i] * FONT_SIZE;
 
         if (glows[i]) {
-          // Bright leading character with glow
-          ctx.shadowBlur   = 12;
-          ctx.shadowColor  = '#c4334a';
-          ctx.fillStyle    = '#ff6080';
+          ctx.shadowBlur  = 12;
+          ctx.shadowColor = '#c4334a';
+          ctx.fillStyle   = '#ff6080';
         } else {
-          // Normal dim character
-          ctx.shadowBlur   = 0;
-          ctx.fillStyle    = `rgba(140, 26, 42, ${0.25 + Math.random() * 0.4})`;
+          ctx.shadowBlur  = 0;
+          ctx.fillStyle   = `rgba(140, 26, 42, ${0.25 + Math.random() * 0.4})`;
         }
 
         ctx.fillText(char, x, y);
 
-        // Reset column once it goes off-screen
         if (y > canvas.height && Math.random() > 0.975) {
           drops[i]  = 0;
           speeds[i] = 0.3 + Math.random() * 0.7;
@@ -225,11 +356,8 @@ const app = {
     localStorage.setItem('nc-lang', lang);
     this._updateLangButtons();
     this.applyLang();
-    // Rebuild whatever view is active
     if (this.view === 'dashboard') this.buildDashboard();
-    if (this.view === 'category' && this.category) {
-      this._updateCategoryScreen();
-    }
+    if (this.view === 'category' && this.category) this._updateCategoryScreen();
     if (this.view === 'quiz') this._renderQuestion();
     if (this.view === 'review') {
       const qs = ALL_QUESTIONS.filter(q => q.category === this.category);
@@ -244,26 +372,21 @@ const app = {
     document.getElementById('btn-lang-en')?.classList.toggle('active', this.lang === 'en');
   },
 
-  /** Swap all data-i18n elements and placeholders */
   applyLang() {
     const t = this.i18n[this.lang];
-    // Text content nodes
     document.querySelectorAll('[data-i18n]').forEach(el => {
       const key = el.getAttribute('data-i18n');
       if (t[key] !== undefined) el.innerHTML = t[key];
     });
-    // Placeholder attributes
     document.querySelectorAll('[data-i18n-ph]').forEach(el => {
       const key = el.getAttribute('data-i18n-ph');
       if (t[key] !== undefined) el.placeholder = t[key];
     });
-    // Dynamic quiz button
     const btnNext = document.getElementById('btn-next');
     if (btnNext) {
       const isLast = this.quizIdx >= this.quizQ.length - 1;
       btnNext.childNodes[0].textContent = isLast ? t.btn_finish : t.btn_next;
     }
-    // Mode card text
     const mQt = document.querySelector('#mode-quiz h3');
     const mQs = document.querySelector('#mode-quiz p');
     const mRt = document.querySelector('#mode-review h3');
@@ -272,18 +395,16 @@ const app = {
     if (mQs) mQs.textContent = t.mode_quiz_sub;
     if (mRt) mRt.textContent = t.mode_rev_title;
     if (mRs) mRs.textContent = t.mode_rev_sub;
-    // Results labels
     const rl = (id, key) => { const el = document.querySelector(id); if (el) el.textContent = t[key]; };
-    rl('#res-ring-label',   'lbl_correct');
-    rl('#stat-correct-lbl','lbl_correct_n');
+    rl('#res-ring-label',    'lbl_correct');
+    rl('#stat-correct-lbl', 'lbl_correct_n');
     rl('#stat-incorrect-lbl','lbl_incorrect_n');
-    rl('#stat-total-lbl',  'lbl_total');
-    rl('#stat-streak-lbl', 'lbl_streak_r');
-    rl('#expl-header-text','expl_header');
-    rl('#fc-hint-text',    'flip_hint');
+    rl('#stat-total-lbl',   'lbl_total');
+    rl('#stat-streak-lbl',  'lbl_streak_r');
+    rl('#expl-header-text', 'expl_header');
+    rl('#fc-hint-text',     'flip_hint');
   },
 
-  /** Returns the right field based on active language */
   _t(q, field) {
     if (this.lang === 'en') {
       const enField = field + '_en';
@@ -292,7 +413,6 @@ const app = {
     return q[field];
   },
 
-  /** Current i18n string */
   _s(key) { return this.i18n[this.lang][key] || key; },
 
   /* ── theme ───────────────────────────────────────── */
@@ -305,35 +425,92 @@ const app = {
 
   /* ── navigation ──────────────────────────────────── */
   navigateTo(view) {
-    ['dashboard','category','quiz','results','review']
-      .forEach(v => document.getElementById(`view-${v}`).classList.add('hidden'));
+    this._hideAllViews();
     const el = document.getElementById(`view-${view}`);
+    if (!el) return;
     el.classList.remove('hidden');
-    // re-trigger animation
     el.classList.remove('view');
     void el.offsetWidth;
     el.classList.add('view');
     this.view = view;
     window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Build smart review content when navigating there
+    if (view === 'smart-review') {
+      this._buildSmartReview();
+    }
+  },
+
+  _hideAllViews() {
+    ['login','dashboard','category','quiz','results','review','smart-review']
+      .forEach(v => document.getElementById(`view-${v}`)?.classList.add('hidden'));
   },
 
   /* ── dashboard ───────────────────────────────────── */
   buildDashboard() {
     const allCats = [...new Set(ALL_QUESTIONS.map(q => q.category))];
-    const total = ALL_QUESTIONS.length;
+    const total   = ALL_QUESTIONS.length;
     const catCount = allCats.length;
 
-    document.getElementById('hero-stats').innerHTML =
-      this._stat(total, this._s('stat_total')) +
-      this._stat(catCount, this._s('stat_cat')) +
-      this._stat(this.bestStreak || '—', this._s('stat_streak'));
+    const user    = Auth.currentUser();
+    const loggedIn = Auth.isLoggedIn();
+
+    if (loggedIn && user) {
+      // Show gamified welcome
+      document.getElementById('hero-welcome')?.classList.remove('hidden');
+      document.getElementById('hero-title-default')?.classList.add('hidden');
+      document.getElementById('smart-review-btn-wrap')?.classList.remove('hidden');
+
+      const stats = Progress.getStats();
+      const shortName = this._getShortName(user.name) || user.name;
+      const el = document.getElementById('hero-greeting');
+      if (el) el.textContent = `歡迎回來，${shortName}！`;
+
+      // Level + XP
+      const lvlEl = document.getElementById('hero-level-num');
+      if (lvlEl) lvlEl.textContent = `Lv.${stats.level}`;
+
+      const streakEl = document.getElementById('hero-streak-num');
+      if (streakEl) streakEl.textContent = stats.streak;
+
+      const xpCur = document.getElementById('hero-xp-current');
+      const xpNxt = document.getElementById('hero-xp-next');
+      const xpLvl = document.getElementById('hero-xp-next-level');
+      const xpFill = document.getElementById('hero-xp-fill');
+      if (xpCur) xpCur.textContent = stats.xpInLevel;
+      if (xpNxt) xpNxt.textContent = stats.xpToNext;
+      if (xpLvl) xpLvl.textContent = stats.level + 1;
+      if (xpFill) xpFill.style.width = `${stats.levelProgress}%`;
+
+      // Stats grid
+      document.getElementById('hero-stats').innerHTML =
+        this._statCard('📚', stats.studied,       '已學習') +
+        this._statCard('⭐', stats.mastered,       '已掌握') +
+        this._statCard('💀', stats.hard,           '困難題') +
+        this._statCard('✅', stats.completedToday, '今日完成');
+
+      // Category progress
+      document.getElementById('cat-progress-section')?.classList.remove('hidden');
+      this._buildCategoryProgress(allCats);
+
+    } else {
+      // Show default hero
+      document.getElementById('hero-welcome')?.classList.add('hidden');
+      document.getElementById('hero-title-default')?.classList.remove('hidden');
+      document.getElementById('smart-review-btn-wrap')?.classList.add('hidden');
+      document.getElementById('cat-progress-section')?.classList.add('hidden');
+
+      document.getElementById('hero-stats').innerHTML =
+        this._stat(total,     this._s('stat_total')) +
+        this._stat(catCount,  this._s('stat_cat'))   +
+        this._stat(this.bestStreak || '—', this._s('stat_streak'));
+    }
 
     this.renderCategoryGrid(allCats);
 
     // live search
     const si = document.getElementById('search-input');
     if (si) {
-      // Remove old listener by cloning the node
       const fresh = si.cloneNode(true);
       si.parentNode.replaceChild(fresh, si);
       fresh.addEventListener('input', e => {
@@ -351,6 +528,46 @@ const app = {
   _stat: (v, l) =>
     `<div class="hero-stat"><span class="hero-stat-value">${v}</span><span class="hero-stat-label">${l}</span></div>`,
 
+  _statCard: (icon, value, label) =>
+    `<div class="hero-stat-card">
+      <div class="stat-card-icon">${icon}</div>
+      <div class="stat-card-val">${value}</div>
+      <div class="stat-card-lbl">${label}</div>
+    </div>`,
+
+  /* ── category progress bars ──────────────────────── */
+  _buildCategoryProgress(allCats) {
+    const grid = document.getElementById('cat-progress-grid');
+    if (!grid) return;
+
+    grid.innerHTML = allCats.map(cat => {
+      const catQs  = ALL_QUESTIONS.filter(q => q.category === cat);
+      const prog   = Progress.getCategoryProgress(cat, catQs);
+      const pct    = prog.percentage;
+      const full   = pct === 100;
+      const status = pct === 0 ? 'not-started' : pct === 100 ? 'completed' : 'in-progress';
+      const statusText = pct === 0 ? '未開始' : pct === 100 ? '✅ 已完成' : '📖 進行中';
+
+      return `
+        <div class="cat-progress-card">
+          <div class="cat-progress-header">
+            <span class="cat-progress-name">${cat}</span>
+            <span class="cat-progress-pct">${pct}%</span>
+          </div>
+          <div class="cat-progress-bar-wrap">
+            <div class="cat-progress-bar-fill ${full ? 'full' : ''}" style="width:${pct}%"></div>
+          </div>
+          <div class="cat-progress-footer">
+            <span class="cat-progress-status ${status}">${statusText}</span>
+            <button class="cat-progress-continue" onclick="app.pickCategory('${this._esc(cat)}')">
+              ${pct > 0 && pct < 100 ? '繼續 →' : '開始'}
+            </button>
+          </div>
+        </div>`;
+    }).join('');
+  },
+
+  /* ── category grid ───────────────────────────────── */
   renderCategoryGrid(cats) {
     const allCats = [...new Set(ALL_QUESTIONS.map(q => q.category))];
     const grid = document.getElementById('category-grid');
@@ -358,15 +575,31 @@ const app = {
       grid.innerHTML = `<p style="color:var(--text-lo);padding:20px">找不到相關類別</p>`;
       return;
     }
+
+    const loggedIn = Auth.isLoggedIn();
+
     grid.innerHTML = cats.map(cat => {
-      const idx = allCats.indexOf(cat);
-      const cfg = this.cats[idx % this.cats.length];
-      const count = ALL_QUESTIONS.filter(q => q.category === cat).length;
+      const idx    = allCats.indexOf(cat);
+      const cfg    = this.cats[idx % this.cats.length];
+      const count  = ALL_QUESTIONS.filter(q => q.category === cat).length;
       const sample = ALL_QUESTIONS.find(q => q.category === cat);
       const displayName = (this.lang === 'en' && sample?.category_en) ? sample.category_en : cat;
       const subText = this.lang === 'en'
         ? `${count} ${this._s('questions_lbl')}`
         : `${this._s('cat_sub_prefix')} ${count} ${this._s('cat_sub_suffix')}`;
+
+      // Progress badge
+      let progressBadge = '';
+      if (loggedIn) {
+        const catQs = ALL_QUESTIONS.filter(q => q.category === cat);
+        const prog  = Progress.getCategoryProgress(cat, catQs);
+        if (prog.mastered > 0) {
+          const badge = prog.percentage === 100 ? 'mastered' : 'learning';
+          const txt   = prog.percentage === 100 ? `⭐ 全部掌握` : `📖 ${prog.mastered}/${prog.total}`;
+          progressBadge = `<span class="cat-progress-badge ${badge}">${txt}</span>`;
+        }
+      }
+
       return `
         <div class="category-card"
              style="--card-accent:${cfg.color}"
@@ -378,6 +611,7 @@ const app = {
           <h3>${displayName}</h3>
           <p class="cat-sub">${this._s('work_item')} ${idx + 1}</p>
           <span class="cat-badge">${subText}</span>
+          ${progressBadge}
         </div>`;
     }).join('');
   },
@@ -392,16 +626,13 @@ const app = {
   },
 
   _updateCategoryScreen() {
-    const cat = this.category;
+    const cat   = this.category;
     const count = ALL_QUESTIONS.filter(q => q.category === cat).length;
     const sample = ALL_QUESTIONS.find(q => q.category === cat);
     const displayName = (this.lang === 'en' && sample?.category_en) ? sample.category_en : cat;
-    const sub = this.lang === 'en'
-      ? `${count} questions`
-      : `共 ${count} 道題目`;
+    const sub = this.lang === 'en' ? `${count} questions` : `共 ${count} 道題目`;
     document.getElementById('cat-screen-title').textContent = displayName;
     document.getElementById('cat-screen-sub').textContent = sub;
-    // Update mode card text
     this.applyLang();
   },
 
@@ -418,9 +649,55 @@ const app = {
     this.streak = 0;
     this.answeredQ = false;
     this.wrongAnswers = [];
+    this.sessionXP = 0;
 
     this.navigateTo('quiz');
     this._renderQuestion();
+  },
+
+  /* ── Smart Review quiz start ─────────────────────── */
+  startSmartReview() {
+    const tab = this._currentTab;
+    let items = [];
+
+    if (tab === 'hard')   items = Progress.getHardQuestions();
+    if (tab === 'queue')  items = Progress.getReviewQueue();
+    if (tab === 'recent') items = Progress.getRecentlyStudied();
+
+    if (!items.length) {
+      this.toast('No questions in this list!', 'ℹ️');
+      return;
+    }
+
+    // Map IDs back to full question objects
+    const qMap = {};
+    ALL_QUESTIONS.forEach(q => { qMap[String(q.id || q.question_id || q.question)] = q; });
+
+    const pool = items
+      .map(item => qMap[String(item.id)] || ALL_QUESTIONS.find(q =>
+        String(q.id) === String(item.id) || String(q.question_id) === String(item.id)
+      ))
+      .filter(Boolean);
+
+    if (!pool.length) {
+      this.toast('Could not match questions — try studying a category first!', 'ℹ️');
+      return;
+    }
+
+    // Use the first question's category as context
+    this.category = pool[0].category || '__SMART__';
+    this.quizQ = this._shuffle([...pool]);
+    this.quizIdx = 0;
+    this.correct = 0;
+    this.answered = 0;
+    this.streak = 0;
+    this.answeredQ = false;
+    this.wrongAnswers = [];
+    this.sessionXP = 0;
+
+    this.navigateTo('quiz');
+    this._renderQuestion();
+    this.toast(`🎯 Smart Review — ${pool.length} questions`, '🎯', 'success');
   },
 
   /* ── ALL-IN-ONE mode ─────────────────────────────── */
@@ -432,7 +709,6 @@ const app = {
       this.reviewIdx = 0;
       this.reviewMode = 'list';
       this.cardFlipped = false;
-      // Set the category screen title then jump to review
       document.getElementById('cat-screen-title').textContent = allLabel;
       document.getElementById('cat-screen-sub').textContent =
         this.lang === 'en'
@@ -449,6 +725,7 @@ const app = {
       this.streak = 0;
       this.answeredQ = false;
       this.wrongAnswers = [];
+      this.sessionXP = 0;
       this.navigateTo('quiz');
       this._renderQuestion();
     }
@@ -462,27 +739,22 @@ const app = {
 
   /* ── render question ─────────────────────────────── */
   _renderQuestion() {
-    const q = this.quizQ[this.quizIdx];
+    const q     = this.quizQ[this.quizIdx];
     const total = this.quizQ.length;
-    const n = this.quizIdx + 1;
+    const n     = this.quizIdx + 1;
 
-    // Card pop animation
     const card = document.getElementById('quiz-card');
     card.classList.remove('pop');
     void card.offsetWidth;
     card.classList.add('pop');
 
-    // Header
     document.getElementById('quiz-q-label').textContent = `${n} / ${total}`;
     document.getElementById('quiz-progress-fill').style.width = `${(n / total) * 100}%`;
     document.getElementById('pill-correct').textContent = this.correct;
     document.getElementById('pill-total').textContent = this.answered;
-
-    // Question
     document.getElementById('q-number').textContent = `Q${n}`;
     document.getElementById('q-text').textContent = this._t(q, 'question');
 
-    // Image
     const imgWrap = document.getElementById('q-image-wrap');
     if (q.imageContext || q.imagePath) {
       imgWrap.classList.remove('hidden');
@@ -493,10 +765,9 @@ const app = {
       imgWrap.classList.add('hidden');
     }
 
-    // Options
     const labels = ['A','B','C','D'];
     const keys   = ['1','2','3','4'];
-    const opts = this._t(q, 'options');
+    const opts   = this._t(q, 'options');
     document.getElementById('options-grid').innerHTML = opts.map((opt, i) => `
       <button class="option-btn" id="opt-${i}"
               onclick="app.pick(${i})"
@@ -506,21 +777,14 @@ const app = {
         <span class="opt-key">${keys[i]}</span>
       </button>`).join('');
 
-    // Explanation hidden
     document.getElementById('explanation-box').classList.add('hidden');
 
-    // Next button label
     const btnNext = document.getElementById('btn-next');
     btnNext.disabled = true;
     btnNext.childNodes[0].textContent = n < total ? this._s('btn_next') : this._s('btn_finish');
 
-    // Streak badge
     this._updateStreak();
-
-    // Reset state
     this.answeredQ = false;
-
-    // Timer
     this._startTimer();
   },
 
@@ -543,7 +807,7 @@ const app = {
   },
 
   _renderTimer() {
-    const el = document.getElementById('quiz-timer');
+    const el      = document.getElementById('quiz-timer');
     const display = document.getElementById('timer-display');
     if (!el || !display) return;
     display.textContent = this.timerSec;
@@ -568,16 +832,20 @@ const app = {
     document.getElementById('btn-next').disabled = false;
     document.getElementById('pill-total').textContent = this.answered;
     this._updateStreak();
+
+    // Save progress — timed out = wrong
+    const qId = String(q.id || q.question_id || this.quizIdx);
+    Progress.saveAnswer(qId, false, q.category, this.streak);
   },
 
   /* ── pick answer ─────────────────────────────────── */
-  pick(idx) {
+  async pick(idx) {
     if (this.answeredQ) return;
     this.answeredQ = true;
     clearInterval(this.timerHandle);
     this.answered++;
 
-    const q = this.quizQ[this.quizIdx];
+    const q         = this.quizQ[this.quizIdx];
     const isCorrect = idx === q.answer;
 
     if (isCorrect) {
@@ -604,12 +872,39 @@ const app = {
       document.getElementById('explanation-box').classList.remove('hidden');
     }
 
-    // Update header
     document.getElementById('pill-correct').textContent = this.correct;
     document.getElementById('pill-total').textContent = this.answered;
     document.getElementById('btn-next').disabled = false;
-
     this._updateStreak();
+
+    // ── Save progress & show XP float ─────────────────
+    const qId = String(q.id || q.question_id || this.quizIdx);
+    try {
+      const result = await Progress.saveAnswer(qId, isCorrect, q.category, this.streak);
+      if (result && result.xpGained > 0) {
+        this.sessionXP += result.xpGained;
+        this._showXPFloat(result.xpGained, idx);
+        // Update nav bar
+        const updatedUser = Auth.currentUser();
+        if (updatedUser) this._updateNavUserBar(updatedUser);
+      }
+    } catch (e) {
+      console.warn('Progress save error:', e.message);
+    }
+  },
+
+  /* ── XP Float popup ──────────────────────────────── */
+  _showXPFloat(amount, optIdx) {
+    const btn = document.getElementById(`opt-${optIdx}`);
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    const el   = document.createElement('div');
+    el.className   = 'xp-float';
+    el.textContent = `+${amount} XP`;
+    el.style.left  = `${rect.left + rect.width / 2 - 30}px`;
+    el.style.top   = `${rect.top + window.scrollY - 10}px`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1500);
   },
 
   _correctMsg() {
@@ -649,15 +944,14 @@ const app = {
       const msg = this.lang === 'en' ? 'Exit quiz?' : '確定要結束測驗嗎？';
       if (!confirm(msg)) return;
     }
-    // If all-in-one mode, go back to dashboard; otherwise category screen
-    this.navigateTo(this.category === '__ALL__' ? 'dashboard' : 'category');
+    this.navigateTo(this.category === '__ALL__' || this.category === '__SMART__' ? 'dashboard' : 'category');
   },
 
   /* ── results ─────────────────────────────────────── */
   _showResults() {
     clearInterval(this.timerHandle);
     const total = this.quizQ.length;
-    const pct = Math.round((this.correct / total) * 100);
+    const pct   = Math.round((this.correct / total) * 100);
 
     let emoji, title, gradeClass, gradeText;
     if (pct >= 80) { emoji='🎉'; title='太棒了！'; gradeClass='grade-a'; gradeText='優秀'; }
@@ -674,7 +968,16 @@ const app = {
     document.getElementById('stat-total').textContent = total;
     document.getElementById('stat-streak').textContent = this.bestStreak;
 
-    // Wrong-only retry button
+    // XP session display
+    const xpSection = document.getElementById('res-xp-gained');
+    const xpNum     = document.getElementById('res-xp-num');
+    if (xpSection && xpNum && this.sessionXP > 0) {
+      xpNum.textContent = this.sessionXP;
+      xpSection.classList.remove('hidden');
+    } else if (xpSection) {
+      xpSection.classList.add('hidden');
+    }
+
     const retryWrong = document.getElementById('btn-retry-wrong');
     if (retryWrong) {
       retryWrong.style.display = this.wrongAnswers.length ? 'inline-flex' : 'none';
@@ -683,25 +986,26 @@ const app = {
 
     this.navigateTo('results');
 
-    // Animate ring
-    const circ = 2 * Math.PI * 52.4;
+    const circ   = 2 * Math.PI * 52.4;
     const offset = circ - (pct / 100) * circ;
-    const ring = document.getElementById('ring-fill');
-    ring.style.strokeDasharray = circ;
+    const ring   = document.getElementById('ring-fill');
+    ring.style.strokeDasharray  = circ;
     ring.style.strokeDashoffset = circ;
-    // Update ring color by grade
     ring.style.stroke = pct >= 80 ? 'var(--correct)' : pct >= 60 ? 'var(--gold)' : 'var(--accent)';
     setTimeout(() => { ring.style.strokeDashoffset = offset; }, 120);
 
     if (pct >= 80) this._confetti();
 
-    // Update dashboard best streak
+    // Refresh dashboard
     this.buildDashboard();
+    // Refresh nav bar
+    const user = Auth.currentUser();
+    if (user) this._updateNavUserBar(user);
   },
 
   /* ── review ──────────────────────────────────────── */
   startReview() {
-    this.reviewIdx = 0;
+    this.reviewIdx  = 0;
     this.cardFlipped = false;
     const questions = ALL_QUESTIONS.filter(q => q.category === this.category);
     document.getElementById('review-title').textContent = this.category;
@@ -765,12 +1069,10 @@ const app = {
 
     document.getElementById('fc-expl').textContent = q.explanation || '';
 
-    // Reset flip
     const fc = document.getElementById('flashcard');
     fc.classList.remove('flipped');
     this.cardFlipped = false;
 
-    // Disable prev/next buttons
     document.getElementById('btn-fc-prev').disabled = this.reviewIdx === 0;
     document.getElementById('btn-fc-next').disabled = this.reviewIdx === questions.length - 1;
   },
@@ -790,6 +1092,70 @@ const app = {
       this.reviewIdx--;
       this._renderFlashcard(ALL_QUESTIONS.filter(q => q.category === this.category));
     }
+  },
+
+  /* ── Smart Review ────────────────────────────────── */
+  _buildSmartReview() {
+    const hardItems   = Progress.getHardQuestions();
+    const queueItems  = Progress.getReviewQueue();
+    const recentItems = Progress.getRecentlyStudied();
+
+    document.getElementById('sr-count-hard').textContent   = hardItems.length;
+    document.getElementById('sr-count-queue').textContent  = queueItems.length;
+    document.getElementById('sr-count-recent').textContent = recentItems.length;
+
+    this.switchReviewTab(this._currentTab || 'hard');
+  },
+
+  switchReviewTab(tab) {
+    this._currentTab = tab;
+
+    // Update tab styles
+    ['hard','queue','recent'].forEach(t => {
+      document.getElementById(`sr-tab-${t}`)?.classList.toggle('active', t === tab);
+    });
+
+    let items = [];
+    if (tab === 'hard')   items = Progress.getHardQuestions();
+    if (tab === 'queue')  items = Progress.getReviewQueue();
+    if (tab === 'recent') items = Progress.getRecentlyStudied();
+
+    const content = document.getElementById('sr-content');
+    if (!content) return;
+
+    if (!items.length) {
+      content.innerHTML = `<div class="sr-empty">
+        ${tab === 'hard'   ? '🎉 No hard questions yet — keep studying!' : ''}
+        ${tab === 'queue'  ? '✅ No questions in your review queue — great job!' : ''}
+        ${tab === 'recent' ? '📚 You haven\'t studied anything yet — start a category!' : ''}
+      </div>`;
+      return;
+    }
+
+    // Map IDs to full question objects for display
+    const qMap = {};
+    ALL_QUESTIONS.forEach(q => { qMap[String(q.id || q.question_id || q.question)] = q; });
+
+    content.innerHTML = items.slice(0, 30).map(item => {
+      const q = qMap[String(item.id)] || ALL_QUESTIONS.find(q =>
+        String(q.id) === String(item.id) || String(q.question_id) === String(item.id)
+      );
+      const text     = q ? q.question : `Question #${item.id}`;
+      const category = item.category || (q && q.category) || '—';
+
+      const wrongBadge   = item.wrongCount   ? `<span class="sr-wrong-badge">❌ ${item.wrongCount} wrong</span>` : '';
+      const correctBadge = item.correctCount ? `<span class="sr-correct-badge">✅ ${item.correctCount} correct</span>` : '';
+
+      return `
+        <div class="sr-question-card">
+          <div class="sr-card-text">${text}</div>
+          <div class="sr-card-footer">
+            <span class="sr-cat-tag">${category}</span>
+            ${wrongBadge}
+            ${correctBadge}
+          </div>
+        </div>`;
+    }).join('');
   },
 
   /* ── keyboard shortcuts ──────────────────────────── */
@@ -830,10 +1196,8 @@ const app = {
 
   /* ── focus search ────────────────────────────────── */
   focusSearch() {
-    // If not on dashboard, navigate there first then focus
     if (this.view !== 'dashboard') {
       this.navigateTo('dashboard');
-      // Small delay to allow view transition
       setTimeout(() => {
         const si = document.getElementById('search-input');
         if (si) { si.focus(); si.select(); si.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
@@ -863,7 +1227,7 @@ const app = {
     const canvas = document.getElementById('confetti-canvas');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
+    canvas.width  = window.innerWidth;
     canvas.height = window.innerHeight;
 
     const colors = ['#c4334a','#8b1a2a','#e05070','#ffd580','#ffffff','#ff9999'];
