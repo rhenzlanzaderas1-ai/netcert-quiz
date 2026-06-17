@@ -1077,8 +1077,16 @@ const app = {
   exitQuiz() {
     clearInterval(this.timerHandle);
     if (this.answered > 0 && this.quizIdx < this.quizQ.length) {
-      const msg = this.lang === 'en' ? 'Exit quiz?' : '確定要結束測驗嗎？';
-      if (!confirm(msg)) return;
+      const msg = this.lang === 'en' ? 'Exit quiz? Your progress will be saved.' : '確定要暫停測驗嗎？您的進度將會自動保留。';
+      if (!confirm(msg)) {
+        // Resume timer if they cancel
+        this.timerHandle = setInterval(() => {
+          this.timeElapsed++;
+          this._updateTimerDisplay();
+        }, 1000);
+        return;
+      }
+      this._saveQuizSession();
     }
     this.navigateTo(this.category === '__ALL__' || this.category === '__SMART__' ? 'dashboard' : 'category');
   },
