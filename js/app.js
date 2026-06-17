@@ -488,9 +488,19 @@ const app = {
     }
   },
 
+  _getSortedCategories() {
+    let cats = [...new Set(ALL_QUESTIONS.map(q => q.category))];
+    cats.sort((a, b) => {
+      const countA = ALL_QUESTIONS.filter(q => q.category === a).length;
+      const countB = ALL_QUESTIONS.filter(q => q.category === b).length;
+      return countB - countA;
+    });
+    return cats;
+  },
+
   /* ── dashboard ───────────────────────────────────── */
   buildDashboard() {
-    const allCats = [...new Set(ALL_QUESTIONS.map(q => q.category))];
+    const allCats = this._getSortedCategories();
     const total   = ALL_QUESTIONS.length;
     const catCount = allCats.length;
 
@@ -629,9 +639,9 @@ const app = {
     }).join('');
   },
 
-  /* ── category grid ───────────────────────────────── */
+  /* ── category grid (study tab) ───────────────────── */
   renderCategoryGrid(cats) {
-    const allCats = [...new Set(ALL_QUESTIONS.map(q => q.category))];
+    const allCats = this._getSortedCategories();
     const grid = document.getElementById('category-grid');
     if (!cats.length) {
       grid.innerHTML = `<p style="color:var(--text-lo);padding:20px">找不到相關類別</p>`;
@@ -1397,6 +1407,45 @@ const app = {
     }
     return arr;
   },
+
+  /* ── sound effects (synthesizer) ─────────────────── */
+  _playSound(type) {
+    try {
+      if (!window.AudioContext && !window.webkitAudioContext) return;
+      if (!this._audioCtx) this._audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (this._audioCtx.state === 'suspended') this._audioCtx.resume();
+      
+      const osc = this._audioCtx.createOscillator();
+      const gain = this._audioCtx.createGain();
+      
+      osc.connect(gain);
+      gain.connect(this._audioCtx.destination);
+      
+      const now = this._audioCtx.currentTime;
+      
+      if (type === 'correct') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523.25, now); // C5
+        osc.frequency.exponentialRampToValueAtTime(1046.50, now + 0.1); // C6
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.3, now + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+        osc.start(now);
+        osc.stop(now + 0.5);
+      } else if (type === 'wrong') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(100, now + 0.15);
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.3, now + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        osc.start(now);
+        osc.stop(now + 0.4);
+      }
+    } catch (e) {
+      console.warn("Audio disabled or error:", e);
+    }
+  }
 };
 
 document.addEventListener('DOMContentLoaded', () => app.init());

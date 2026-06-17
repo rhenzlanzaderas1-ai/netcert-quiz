@@ -1,0 +1,17 @@
+{
+  "name": "NetC Exam Reviewer",
+  "short_name": "NetC",
+  "description": "Interactive study app for Taiwan Networking Certification",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#080507",
+  "theme_color": "#c4334a",
+  "icons": [
+    {
+      "src": "avatar.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

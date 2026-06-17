@@ -9,6 +9,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+TC:wght@400;500;600;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css?v=2">
+  
+  <!-- PWA Settings -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#080507">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="avatar.png">
 </head>
 <body>
 
@@ -38,12 +45,7 @@
   </div>
 
   <div class="nav-actions">
-    <button class="kbd-hint" id="kb-search-hint" title="搜尋類別"
-      onclick="app.focusSearch()"
-      style="cursor:pointer;background:none;border:none;font:inherit;">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:4px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <span data-i18n="search_btn">搜尋</span>
-    </button>
+    <!-- Search button removed as per user request -->
     <!-- Language toggle -->
     <div class="lang-toggle" id="lang-toggle" title="Switch language" role="group" aria-label="Language">
       <button class="lang-btn active" id="btn-lang-zh" onclick="app.setLang('zh')">中文</button>
