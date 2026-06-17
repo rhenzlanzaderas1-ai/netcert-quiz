@@ -480,12 +480,17 @@ const app = {
       if (xpLvl) xpLvl.textContent = stats.level + 1;
       if (xpFill) xpFill.style.width = `${stats.levelProgress}%`;
 
+      const svgStudied = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>`;
+      const svgMastered = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+      const svgHard = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
+      const svgCompleted = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+
       // Stats grid
       document.getElementById('hero-stats').innerHTML =
-        this._statCard('📚', stats.studied,       '已學習') +
-        this._statCard('⭐', stats.mastered,       '已掌握') +
-        this._statCard('💀', stats.hard,           '困難題') +
-        this._statCard('✅', stats.completedToday, '今日完成');
+        this._statCard(svgStudied, stats.studied, '已學習') +
+        this._statCard(svgMastered, stats.mastered, '已掌握') +
+        this._statCard(svgHard, stats.hard, '困難題') +
+        this._statCard(svgCompleted, stats.completedToday, '今日完成');
 
       // Category progress
       document.getElementById('cat-progress-section')?.classList.remove('hidden');
