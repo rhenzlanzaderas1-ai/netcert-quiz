@@ -1519,4 +1519,19 @@ const app = {
   }
 };
 
-document.addEventListener('DOMContentLoaded', () => app.init());
+document.addEventListener('DOMContentLoaded', async () => {
+  await app.init();
+  // Handle QR code scan: ?join=PINHERE auto-opens the join screen
+  const params = new URLSearchParams(window.location.search);
+  const joinPin = params.get('join');
+  if (joinPin && joinPin.length === 6) {
+    // Small delay to let the app fully render
+    setTimeout(() => {
+      app.showKahootJoin();
+      const pinInput = document.getElementById('k-pin-input');
+      if (pinInput) pinInput.value = joinPin;
+    }, 300);
+    // Clean URL without reloading page
+    history.replaceState({}, '', window.location.pathname);
+  }
+});

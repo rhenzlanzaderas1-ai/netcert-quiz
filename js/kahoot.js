@@ -104,9 +104,6 @@ window.Kahoot = {
       const players = snap.val() || {};
       const list = Object.values(players);
 
-      const el = document.getElementById('k-pin-display');
-      if (el) el.textContent = this.pin.slice(0,3) + ' ' + this.pin.slice(3);
-
       const cnt = document.getElementById('k-player-count');
       if (cnt) cnt.textContent = list.length;
 

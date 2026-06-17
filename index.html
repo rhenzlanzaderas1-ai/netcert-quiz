@@ -9,7 +9,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+TC:wght@400;500;600;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css?v=3">
-  <link rel="stylesheet" href="css/kahoot.css?v=1">
+  <link rel="stylesheet" href="css/kahoot.css?v=2">
+  <!-- QR Code library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   
   <!-- PWA Settings -->
   <link rel="manifest" href="manifest.json">
@@ -639,8 +641,13 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           <span id="k-player-count">0</span> players joined
         </div>
-        <div class="k-url-hint">Ask students to visit the site and click "Join a Game"</div>
+        <div class="k-url-hint" id="k-url-hint">Scan QR or visit the site → click "Join a Game"</div>
         <div class="k-music-viz"><div class="k-viz-bar"></div><div class="k-viz-bar"></div><div class="k-viz-bar"></div><div class="k-viz-bar"></div><div class="k-viz-bar"></div></div>
+      </div>
+      <!-- QR Code -->
+      <div id="k-qr-wrap" style="display:flex;flex-direction:column;align-items:center;margin:12px 0 6px;">
+        <div id="k-qr-code" style="background:#fff;padding:10px;border-radius:12px;display:inline-block;box-shadow:0 0 24px rgba(196,51,74,0.35);"></div>
+        <div style="color:rgba(255,255,255,0.35);font-size:0.72rem;margin-top:8px;">Scan to join instantly</div>
       </div>
       <div class="k-player-grid" id="k-player-list"></div>
       <button class="k-start-btn" id="k-start-btn" onclick="Kahoot.startGame()" disabled>⏳ Waiting for players...</button>
