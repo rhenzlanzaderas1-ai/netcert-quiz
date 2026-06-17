@@ -93,6 +93,37 @@ window.Kahoot = {
 
     this._listenForPlayers();
     this._showKahootView('lobby');
+
+    // Update PIN display
+    const pinEl = document.getElementById('k-pin-display');
+    if (pinEl) pinEl.textContent = pin.slice(0,3) + ' ' + pin.slice(3);
+
+    // Update URL hint
+    const hintEl = document.getElementById('k-url-hint');
+    const shortUrl = window.location.hostname + window.location.pathname.replace(/\/$/, '');
+    if (hintEl) hintEl.textContent = shortUrl + '  →  "Join a Game"';
+
+    // Generate QR code
+    const joinUrl = window.location.origin + window.location.pathname.replace(/\/$/, '') + '/?join=' + pin;
+    const qrContainer = document.getElementById('k-qr-code');
+    if (qrContainer) {
+      qrContainer.innerHTML = '';
+      if (window.QRCode) {
+        new QRCode(qrContainer, {
+          text: joinUrl,
+          width: 160,
+          height: 160,
+          colorDark: '#1a0008',
+          colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      } else {
+        // Fallback: show URL as text if library not loaded
+        qrContainer.style.cssText = 'padding:12px;font-size:0.7rem;color:#1a0008;word-break:break-all;max-width:160px;';
+        qrContainer.textContent = joinUrl;
+      }
+    }
+
     this.playLobbyMusic();
     return pin;
   },
