@@ -888,7 +888,50 @@ body::before {
   .btn-start-all { font-size: 0.95rem; padding: 12px 22px; }
 }
 
-/* ── Hero CTA Buttons ──────────────────────────────── */
+/* ── Tab Navigation ────────────────────────────── */
+.app-tabs {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 24px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.tab-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 10px 4px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.tab-btn:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tab-btn.active {
+  color: var(--accent);
+  background: rgba(255, 51, 102, 0.1);
+}
+
+.tab-content.hidden {
+  display: none !important;
+}
+
+/* ── Hero & Stats Grid ─────────────────────────── */
 .hero-cta {
   display: flex;
   flex-wrap: wrap;

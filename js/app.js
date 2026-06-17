@@ -422,21 +422,25 @@ const app = {
   },
 
   /* ── navigation ──────────────────────────────────── */
-  navigateTo(view) {
-    this._hideAllViews();
-    const el = document.getElementById(`view-${view}`);
-    if (!el) return;
-    el.classList.remove('hidden');
-    el.classList.remove('view');
-    void el.offsetWidth;
-    el.classList.add('view');
-    this.view = view;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  navigateTo(viewId) {
+    document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+    const tgt = document.getElementById(`view-${viewId}`);
+    if (tgt) tgt.classList.remove('hidden');
+    window.scrollTo(0, 0);
 
-    // Build smart review content when navigating there
-    if (view === 'smart-review') {
+    if (viewId === 'smart-review') {
       this._buildSmartReview();
     }
+  },
+
+  switchTab(tabId) {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.id === `tab-btn-${tabId}`);
+    });
+    ['dashboard', 'progress', 'study'].forEach(id => {
+      const el = document.getElementById(`tab-${id}`);
+      if (el) el.classList.toggle('hidden', id !== tabId);
+    });
   },
 
   _hideAllViews() {
@@ -453,11 +457,15 @@ const app = {
     const user    = Auth.currentUser();
     const loggedIn = Auth.isLoggedIn();
 
-    if (loggedIn && user) {
-      // Show gamified welcome
+    if (loggedIn) {
+      // Show logged-in hero
       document.getElementById('hero-welcome')?.classList.remove('hidden');
       document.getElementById('hero-title-default')?.classList.add('hidden');
       document.getElementById('smart-review-btn-wrap')?.classList.remove('hidden');
+      document.getElementById('app-tabs')?.classList.remove('hidden');
+      
+      // Switch to dashboard tab by default when navigating to dashboard
+      this.switchTab('dashboard');
 
       const stats = Progress.getStats();
       const shortName = this._getShortName(user.name) || user.name;
@@ -501,7 +509,12 @@ const app = {
       document.getElementById('hero-welcome')?.classList.add('hidden');
       document.getElementById('hero-title-default')?.classList.remove('hidden');
       document.getElementById('smart-review-btn-wrap')?.classList.add('hidden');
-      document.getElementById('cat-progress-section')?.classList.add('hidden');
+      document.getElementById('app-tabs')?.classList.add('hidden');
+      
+      // When not logged in, force 'study' view structure and hide tabs
+      this.switchTab('dashboard');
+      document.getElementById('tab-study')?.classList.remove('hidden');
+      document.getElementById('tab-progress')?.classList.add('hidden');
 
       document.getElementById('hero-stats').innerHTML =
         this._stat(total,     this._s('stat_total')) +
