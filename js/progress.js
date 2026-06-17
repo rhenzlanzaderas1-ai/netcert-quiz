@@ -11,7 +11,7 @@ window.Progress = {
     if (!user) return { data: {}, stats: this.stats };
 
     try {
-      const snap = await db.collection("users").doc(user.uid).collection("progress").get();
+      const snap = await db.collection("users").doc(user.username).collection("progress").get();
       this.data = {};
       let studied = 0, mastered = 0, hard = 0;
 
@@ -26,7 +26,7 @@ window.Progress = {
 
       this.stats = { studied, mastered, hard, completedToday: 0 };
       
-      const userSnap = await db.collection("users").doc(user.uid).get();
+      const userSnap = await db.collection("users").doc(user.username).get();
       return { 
         data: this.data, 
         stats: this.stats, 
@@ -84,9 +84,9 @@ window.Progress = {
 
     // Sync to Firestore (async, fire-and-forget to keep UI snappy)
     try {
-      db.collection("users").doc(user.uid).collection("progress").doc(String(questionId)).set(p);
+      db.collection("users").doc(user.username).collection("progress").doc(String(questionId)).set(p);
       if (xpGain > 0 || !correct) {
-        db.collection("users").doc(user.uid).update({
+        db.collection("users").doc(user.username).update({
           xp: user.xp,
           level: user.level,
           streak: user.streak

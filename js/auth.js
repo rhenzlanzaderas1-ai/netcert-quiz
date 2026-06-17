@@ -8,13 +8,24 @@ window.Auth = {
   // Wait for the initial Firebase auth state to resolve
   init() {
     return new Promise((resolve) => {
-      auth.onAuthStateChanged((user) => {
+      auth.onAuthStateChanged(async (user) => {
         if (user) {
+          const username = user.email.split('@')[0];
           this._user = {
             uid: user.uid,
             email: user.email,
-            name: user.displayName || user.email.split('@')[0],
+            username: username,
+            name: user.displayName || username,
           };
+          
+          try {
+            const docSnap = await db.collection("users").doc(username).get();
+            if (docSnap.exists) {
+              this._user = { ...this._user, ...docSnap.data() };
+            }
+          } catch (e) {
+            console.warn("Could not load extended profile", e);
+          }
         } else {
           this._user = null;
         }
@@ -38,17 +49,19 @@ window.Auth = {
   },
 
   async login(idOrEmail, password) {
+    const username = idOrEmail.trim().toLowerCase().replace(/\s+/g, '_');
     const email = this._formatEmail(idOrEmail);
     try {
       const userCredential = await auth.signInWithEmailAndPassword(email, password);
       this._user = {
         uid: userCredential.user.uid,
         email: userCredential.user.email,
-        name: userCredential.user.displayName || email.split('@')[0],
+        username: username,
+        name: userCredential.user.displayName || username,
       };
       
       // Load user metadata from Firestore to get XP and level
-      const docSnap = await db.collection("users").doc(this._user.uid).get();
+      const docSnap = await db.collection("users").doc(username).get();
       if (docSnap.exists) {
         this._user = { ...this._user, ...docSnap.data() };
       }
@@ -60,6 +73,7 @@ window.Auth = {
   },
 
   async register(idOrEmail, password, fullName) {
+    const username = idOrEmail.trim().toLowerCase().replace(/\s+/g, '_');
     const email = this._formatEmail(idOrEmail);
     if (!fullName || fullName.trim() === '') {
       throw new Error("請輸入姓名 / Full name is required");
@@ -72,14 +86,17 @@ window.Auth = {
       this._user = {
         uid: userCredential.user.uid,
         email: userCredential.user.email,
+        username: username,
         name: fullName,
         xp: 0,
         level: 1,
         streak: 0
       };
 
-      // Create initial progress document in Firestore
-      await db.collection("users").doc(this._user.uid).set({
+      // Create initial progress document in Firestore using the Username as the Document ID!
+      await db.collection("users").doc(username).set({
+        uid: userCredential.user.uid,
+        username: username,
         name: fullName,
         email: email,
         xp: 0,
