@@ -210,20 +210,37 @@
 
 /* ── Shared Question Header ────────────────────────── */
 .k-q-header {
-  background: rgba(0,0,0,0.55); border-bottom: 1px solid rgba(196,51,74,0.2);
-  padding: 10px 16px; display: flex; align-items: center;
+  padding: 20px 24px; display: flex; align-items: center;
   justify-content: space-between; flex-shrink: 0; gap: 10px;
-  backdrop-filter: blur(10px);
 }
+.k-ctrl-btn {
+  padding: 8px 20px; background: rgba(255,255,255,0.1); border-radius: 50px;
+  border: 1px solid rgba(255,255,255,0.2); color: #fff; cursor: pointer;
+  font-size: 0.9rem; font-weight: 700; backdrop-filter: blur(8px);
+  transition: all 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.k-ctrl-btn:hover { background: rgba(255,255,255,0.2); transform: scale(1.05); }
+.k-ctrl-btn.stop { background: rgba(196,51,74,0.3); border-color: rgba(196,51,74,0.5); }
+.k-ctrl-btn.stop:hover { background: rgba(196,51,74,0.5); }
+
+.k-center-counter {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  background: rgba(10,3,8,0.9); border: 2px solid rgba(255,255,255,0.15);
+  border-radius: 50px; padding: 12px 28px;
+  font-size: 1.2rem; font-weight: 800; color: #fff;
+  z-index: 100; box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  white-space: nowrap; pointer-events: none;
+}
+
 .k-q-num { color: rgba(255,255,255,0.45); font-size: 0.78rem; font-weight: 600; min-width: 60px; }
 .k-q-text-wrap {
-  background: rgba(0,0,0,0.5); flex-shrink: 0;
-  padding: 16px 20px; text-align: center; backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(196,51,74,0.15);
+  flex-shrink: 0; text-align: center; margin-bottom: 10px;
 }
 .k-q-text {
-  font-size: clamp(0.92rem, 3vw, 1.25rem); font-weight: 700; color: #fff;
-  line-height: 1.45; max-width: 780px; margin: 0 auto;
+  font-size: clamp(1.4rem, 3.5vw, 2rem); font-weight: 900; color: #fff;
+  line-height: 1.45; max-width: 900px; margin: 0 auto;
+  text-shadow: 0 4px 16px rgba(0,0,0,0.5);
 }
 
 /* ── Countdown Timer ───────────────────────────────── */

@@ -667,43 +667,58 @@
     </div>
 
     <!-- Sub-view: Host Question -->
-    <div id="k-view-host-question" class="k-sub-view" style="overflow:hidden;">
-      <div class="k-q-header" style="justify-content: flex-start;">
-        <div class="k-timer-wrap">
+    <div id="k-view-host-question" class="k-sub-view" style="overflow:hidden; position:relative;">
+      <!-- Floating Header Elements -->
+      <div class="k-q-header" style="background:transparent; border:none; position:absolute; top:0; left:0; right:0; z-index:50; pointer-events:none;">
+        
+        <!-- Timer (Top Left) -->
+        <div class="k-timer-wrap" style="pointer-events:auto;">
           <svg class="k-timer-ring-svg" width="56" height="56" viewBox="0 0 100 100">
             <circle class="k-timer-ring-bg" cx="50" cy="50" r="45"/>
             <circle class="k-timer-ring-fg" id="k-timer-ring-fg" cx="50" cy="50" r="45"/>
           </svg>
           <span class="k-timer-num" id="k-timer-num">20</span>
         </div>
-        <span class="k-q-num" id="k-q-num" style="flex:1; text-align:center;">Q1 / 10</span>
-        <div style="display:flex; align-items:center; gap:8px;">
-          <span class="k-answered-count" id="k-answered-count" style="margin-right:10px;">0 answered</span>
-          <button onclick="Kahoot.skipQuestion()" style="padding:6px 14px; background:rgba(255,255,255,0.1); border-radius:50px; border:1px solid rgba(255,255,255,0.2); color:#fff; cursor:pointer; font-size:0.8rem;">Skip</button>
-          <button onclick="if(confirm('End game early?')) Kahoot.cleanup(); app.navigateTo('dashboard');" style="padding:6px 14px; background:rgba(196,51,74,0.3); border-radius:50px; border:1px solid rgba(196,51,74,0.5); color:#fff; cursor:pointer; font-size:0.8rem;">Stop</button>
+        
+        <!-- Controls (Top Right) -->
+        <div style="display:flex; align-items:center; gap:8px; pointer-events:auto;">
+          <button onclick="Kahoot.skipQuestion()" class="k-ctrl-btn">Skip</button>
+          <button onclick="if(confirm('End game early?')) Kahoot.cleanup(); app.navigateTo('dashboard');" class="k-ctrl-btn stop">Stop</button>
         </div>
       </div>
-      <div class="k-q-text-wrap">
-        <div class="k-q-text" id="k-q-text"></div>
+      
+      <!-- Center Answer Counter -->
+      <div class="k-center-counter" id="k-answered-count">0 / 0 answered</div>
+
+      <!-- Content Below -->
+      <div class="k-q-text-wrap" style="background:transparent; border:none; padding-top:40px; pointer-events:none;">
+        <div class="k-q-text" id="k-q-text" style="font-size: clamp(1.4rem, 3.5vw, 2rem); pointer-events:auto;"></div>
       </div>
-      <div class="k-host-answers-grid" id="k-host-opts"></div>
+      <div class="k-host-answers-grid" id="k-host-opts" style="padding-top:20px; z-index:2;"></div>
     </div>
 
     <!-- Sub-view: Player Question -->
-    <div id="k-view-player-question" class="k-sub-view" style="position:relative;">
-      <div class="k-q-header" style="justify-content: flex-start;">
-        <div class="k-timer-wrap">
+    <div id="k-view-player-question" class="k-sub-view" style="overflow:hidden; position:relative;">
+      <!-- Floating Header Elements -->
+      <div class="k-q-header" style="background:transparent; border:none; position:absolute; top:0; left:0; right:0; z-index:50; pointer-events:none;">
+        
+        <!-- Timer (Top Left) -->
+        <div class="k-timer-wrap" style="pointer-events:auto;">
           <svg class="k-timer-ring-svg" width="56" height="56" viewBox="0 0 100 100">
             <circle class="k-timer-ring-bg" cx="50" cy="50" r="45"/>
             <circle class="k-timer-ring-fg" id="k-ptimer-ring-fg" cx="50" cy="50" r="45"/>
           </svg>
           <span class="k-timer-num" id="k-ptimer-num">20</span>
         </div>
-        <span class="k-q-num" id="k-pq-num" style="flex:1; text-align:center;">Q1</span>
-        <span style="font-size:0.75rem;color:rgba(255,255,255,0.4);" id="k-my-score-display">0 pts</span>
+        
+        <!-- Score (Top Right) -->
+        <div style="display:flex; align-items:center; pointer-events:auto;">
+          <span style="font-size:1.1rem;font-weight:800;color:rgba(255,255,255,0.8); background:rgba(0,0,0,0.4); padding:6px 14px; border-radius:50px; border:1px solid rgba(255,255,255,0.1);" id="k-my-score-display">0 pts</span>
+        </div>
       </div>
-      <!-- Removed question text wrapper for players -->
-      <div class="k-player-ans-grid" id="k-player-answers" style="padding-top:20px;"></div>
+
+      <!-- Question Content Below -->
+      <div class="k-player-ans-grid" id="k-player-answers" style="padding-top:100px; z-index:2;"></div>
       <div id="k-player-waiting-overlay" class="k-player-waiting-overlay hidden">
         <div class="k-waiting-dots"><span></span><span></span><span></span></div>
         <div class="k-player-answered-msg">Answer submitted! Waiting for results...</div>
