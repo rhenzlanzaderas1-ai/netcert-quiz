@@ -35,7 +35,7 @@ window.Auth = {
   },
 
   isAdmin() {
-    return this._user && this._user.username === 's25115410';
+    return this._user && (this._user.username === 's25115410' || this._user.username === 'dancer');
   },
 
   currentUser() {
